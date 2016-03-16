@@ -55,7 +55,9 @@ def main():
 def estimate_diurnal_vpd(vpd09, vpd15, vpd09_next, vpd15_prev):
     """
     Interpolate VPD between 9am and 3pm values to generate diurnal VPD
-    following the method of Haverd et al.
+    following the method of Haverd et al. This seems reasonable, vapour pressure
+    plotted aginst time of day often does not reveal consistent patterns, with
+    small fluctuations (see Kimball and Bellamy, 1986).
 
     Reference:
     ---------
@@ -65,7 +67,7 @@ def estimate_diurnal_vpd(vpd09, vpd15, vpd09_next, vpd15_prev):
     """
     # number of hours gap, i.e. 3pm to 9am the next day
     gap = 18.0
-    
+
     vpd = np.zeros(48)
     for i in xrange(48):
         hour = i / 2.0
