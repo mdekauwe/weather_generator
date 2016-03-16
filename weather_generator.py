@@ -8,7 +8,7 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 from math import pi, cos, sin, exp, sqrt
-
+import random
 
 __author__  = "Martin De Kauwe"
 __version__ = "1.0 (16.03.2016)"
@@ -31,6 +31,43 @@ def main():
     plt.ylabel("Air Temperature (deg C)")
     plt.xlabel("Hour of day")
     plt.show()
+
+    rain = 10.0
+    ppt = diurnalise_rainfall(rain)
+    plt.plot(hours, ppt, "ro")
+    plt.ylabel("PPT (mm)")
+    plt.xlabel("Hour of day")
+    plt.show()
+
+def diurnalise_rainfall(rain):
+    """
+    Assign daily PPT total to hours of the day, following MAESTRA, which follows
+    algorithm from GRAECO (model of D. Loustau).
+    """
+    ppt = np.zeros(48)
+
+    # All rain falls in one hour for light storms (<2 mm)
+    if rain <= 2.0:
+        hour_index = randint(0,48)
+        ppt[hour_index] = rain
+
+    # All rain falls in 24 hours for storms >46 mm
+    elif rain > 46.0:
+        for i in xrange(48):
+            ppt[i] = rain / 48.0
+    # All rain falls at 2mm/hour at a random time of the day
+    else:
+        #num_hrs_with_rain = min(int((rain / 2.0) * 48. / 24.), 48)
+        num_hrs_with_rain = int(rain / 2.0)
+        rate = rain / float(num_hrs_with_rain)
+        # sample without replacement
+        random_hours = random.sample(range(0, 48), num_hrs_with_rain)
+        print random_hours, num_hrs_with_rain
+        for i in xrange(num_hrs_with_rain):
+            ppt[random_hours[i]] = rate
+
+    print sum(ppt)
+    return ppt
 
 def maestra_diurnal_func(tmin, tmax, day_length):
     """ Not sure where this function original comes from... """
