@@ -1,3 +1,3 @@
 # Weather generator
 
-Dirurnal air temperature from tmin, tmax following Parton and Logan (1981), adding the discplacement factor for tmin.
+- Calculate the dirurnal air temperature from Tmin & Tmax following Parton and Logan (1981). I have added the missing displacement factor in the original Parton paper, which removes the discontinuity and forces the temp to reach Tmin.
