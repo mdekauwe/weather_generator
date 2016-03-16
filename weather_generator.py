@@ -37,7 +37,46 @@ def main():
     plt.plot(hours, ppt, "ro")
     plt.ylabel("PPT (mm)")
     plt.xlabel("Hour of day")
+    plt.ylim(0, 3)
     plt.show()
+
+    vpd09 = 1.4
+    vpd09_next = 1.8
+    vpd15 = 2.3
+    vpd15_prev = 3.4
+    vpd = estimate_diurnal_vpd(vpd09, vpd15, vpd09_next, vpd15_prev)
+
+    plt.plot(hours, vpd, "ro")
+    plt.ylabel("VPD (kPa)")
+    plt.xlabel("Hour of day")
+    plt.ylim(0, 3)
+    plt.show()
+
+def estimate_diurnal_vpd(vpd09, vpd15, vpd09_next, vpd15_prev):
+    """
+    Interpolate VPD between 9am and 3pm values to generate diurnal VPD
+    following the method of Haverd et al.
+
+    Reference:
+    ---------
+    * Haverd et al. (2013) Multiple observation types reduce uncertainty in
+      Australia's terrestrial carbon and water cycles. Biogeosciences, 10,
+      2011-2040.
+    """
+    # number of hours gap, i.e. 3pm to 9am the next day
+    gap = 18.0
+    
+    vpd = np.zeros(48)
+    for i in xrange(48):
+        hour = i / 2.0
+        if hour <= 9.0:
+           vpd[i] = vpd15_prev + (vpd09 - vpd15_prev) * (9.0 + hour) / gap
+        elif hour > 9.0 and hour <= 15.0:
+           vpd[i] = vpd09 + (vpd15 - vpd09) * (hour - 9.0) / (15.0 - 9.0)
+        elif hour > 15.0:
+            vpd[i] =  vpd15 + (vpd09_next - vpd15) * (hour - 15.0) / gap
+
+    return vpd
 
 def disaggregate_rainfall(rain):
     """
@@ -45,12 +84,12 @@ def disaggregate_rainfall(rain):
     algorithm from GRAECO (model of D. Loustau).
 
     Reference:
-    * Loustau, D., F. Pluviaud, A. Bosc, A. Porté, P. Berbigier, M. Déqué
-      and V. Pérarnaud. 2001. Impact of a regional 2 × CO2 climate scenario
+    * Loustau, D., F. Pluviaud, A. Bosc, A. Porte, P. Berbigier, M. Deque
+      and V. Perarnaud. 2001. Impact of a regional 2 x CO2 climate scenario
       on the water balance, carbon balance and primary production
       of maritime pine in southwestern France. In Models for the Sustainable
-      Management of Plantation Forests. Ed. M. Tomé. European
-      Cultivated Forest Inst., EFI Proc. No. 41D, Bordeaux, pp 45–58.
+      Management of Plantation Forests. Ed. M. Tome. European
+      Cultivated Forest Inst., EFI Proc. No. 41D, Bordeaux, pp 45-58.
     """
     ppt = np.zeros(48)
 
@@ -70,7 +109,6 @@ def disaggregate_rainfall(rain):
         rate = rain / float(num_hrs_with_rain)
         # sample without replacement
         random_hours = random.sample(range(0, 48), num_hrs_with_rain)
-        print random_hours, num_hrs_with_rain
         for i in xrange(num_hrs_with_rain):
             ppt[random_hours[i]] = rate
 
