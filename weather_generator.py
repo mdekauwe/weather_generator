@@ -7,7 +7,8 @@ AWAP weather generator functions
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-from math import pi, cos, sin, exp
+from math import pi, cos, sin, exp, sqrt
+
 
 __author__  = "Martin De Kauwe"
 __version__ = "1.0 (16.03.2016)"
@@ -21,11 +22,31 @@ def main():
     day_length = 8.0
 
     tday = estimate_diurnal_temp(tmin, tmax, day_length)
-
+    tday2 = maestra_diurnal_func(tmin, tmax, day_length)
+    #par = estimate_diurnal_par(1500.0, day_length)
     hours = np.arange(48) / 2.0
-    plt.plot(hours, tday, "ro")
-    plt.plot(hours, tday, "k-")
+    plt.plot(hours, tday, "r-")
+    plt.plot(hours, tday2, "k-")
     plt.show()
+
+def maestra_diurnal_func(tmin, tmax, day_length):
+    """ Not sure where this function original comes from... """
+    tav = (tmax + tmin) / 2.0
+    tampl = (tmax - tmin) / 2.0
+
+    tday = np.zeros(48)
+    for i in xrange(48):
+        hrtime = i - 0.5
+        time = i + day_length * 0.5 - 48.0 / 2.0
+        if time < 0.0 or time > day_length:
+            if time < 0.0:
+                hrtime += 48
+            tday[i] = tav - (tav - tmin) * (hrtime - day_length * 0.5 - \
+                                            (48.0 / 2.0)) / (48.0 - day_length)
+        else:
+            tday[i] = tav - tampl * cos(1.5 * pi * time / day_length)
+
+    return (tday)
 
 def estimate_diurnal_temp(tmin, tmax, day_length):
     """
