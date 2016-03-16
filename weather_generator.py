@@ -102,6 +102,10 @@ def estimate_diurnal_temp(tmin, tmax, day_length):
     in the daylight and an exponential decrease in temperature
     at night.
 
+    TO DO:
+    - Hours between 00:00 and sunrise should be modelled using the previous
+      days information.
+
     References:
     ----------
     * Parton and Logan (1981) A model for dirunal variation in soil and
