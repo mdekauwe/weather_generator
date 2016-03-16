@@ -43,6 +43,14 @@ def disaggregate_rainfall(rain):
     """
     Assign daily PPT total to hours of the day, following MAESTRA, which follows
     algorithm from GRAECO (model of D. Loustau).
+
+    Reference:
+    * Loustau, D., F. Pluviaud, A. Bosc, A. Porté, P. Berbigier, M. Déqué
+      and V. Pérarnaud. 2001. Impact of a regional 2 × CO2 climate scenario
+      on the water balance, carbon balance and primary production
+      of maritime pine in southwestern France. In Models for the Sustainable
+      Management of Plantation Forests. Ed. M. Tomé. European
+      Cultivated Forest Inst., EFI Proc. No. 41D, Bordeaux, pp 45–58.
     """
     ppt = np.zeros(48)
 
