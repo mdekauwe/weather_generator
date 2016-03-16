@@ -25,8 +25,11 @@ def main():
     tday2 = maestra_diurnal_func(tmin, tmax, day_length)
     #par = estimate_diurnal_par(1500.0, day_length)
     hours = np.arange(48) / 2.0
-    plt.plot(hours, tday, "r-")
-    plt.plot(hours, tday2, "k-")
+    plt.plot(hours, tday, "r-", label="Parton & Logan")
+    plt.plot(hours, tday2, "k-", label="MAESPA")
+    plt.legend(numpoints=1, loc="best")
+    plt.ylabel("Air Temperature (deg C)")
+    plt.xlabel("Hour of day")
     plt.show()
 
 def maestra_diurnal_func(tmin, tmax, day_length):
