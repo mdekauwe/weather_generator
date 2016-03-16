@@ -66,7 +66,6 @@ def disaggregate_rainfall(rain):
         for i in xrange(num_hrs_with_rain):
             ppt[random_hours[i]] = rate
 
-    print sum(ppt)
     return ppt
 
 def maestra_diurnal_func(tmin, tmax, day_length):
