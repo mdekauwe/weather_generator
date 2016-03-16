@@ -33,13 +33,13 @@ def main():
     plt.show()
 
     rain = 10.0
-    ppt = diurnalise_rainfall(rain)
+    ppt = disaggregate_rainfall(rain)
     plt.plot(hours, ppt, "ro")
     plt.ylabel("PPT (mm)")
     plt.xlabel("Hour of day")
     plt.show()
 
-def diurnalise_rainfall(rain):
+def disaggregate_rainfall(rain):
     """
     Assign daily PPT total to hours of the day, following MAESTRA, which follows
     algorithm from GRAECO (model of D. Loustau).
