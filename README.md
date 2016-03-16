@@ -4,3 +4,5 @@
 
 - Disaggregate daily rainfall following function in MAESTRA, which comes from
  Loustau et al. (2001).
+
+- Interpolate between VPD 9am and 3pm values from AWAP data follow Haverd et al. (2013)
