@@ -6,3 +6,5 @@
  Loustau et al. (2001).
 
 - Interpolate between VPD 9am and 3pm values from AWAP data follow Haverd et al. (2013)
+
+- Disaggregate radiation following Haverd et al. (2013)
