@@ -31,7 +31,7 @@ def main():
     plt.ylabel("par ($\mu$mol m$^{-2}$ s$^{-1}$)")
     plt.xlabel("Hour of day")
     plt.show()
-    
+
     tday = estimate_diurnal_temp(tmin, tmax, day_length)
     tday2 = maestra_diurnal_func(tmin, tmax, day_length)
 
@@ -191,22 +191,27 @@ def disaggregate_rainfall(rain):
 
     # All rain falls in one hour for light storms (<2 mm)
     if rain <= 2.0:
-        hour_index = randint(0,48)
+        hour_index = np.random.randint(low=0, high=47)
         ppt[hour_index] = rain
 
     # All rain falls in 24 hours for storms >46 mm
     elif rain > 46.0:
         for i in xrange(48):
             ppt[i] = rain / 48.0
-    # All rain falls at 2mm/hour at a random time of the day
+
+    # Aim if for all rain to fall at 2mm/hour at a random time of the day.
+    # If we generate the same random number, then we increase rainfall
+    # for this hour
     else:
         #num_hrs_with_rain = min(int((rain / 2.0) * 48. / 24.), 48)
         num_hrs_with_rain = int(rain / 2.0)
         rate = rain / float(num_hrs_with_rain)
         # sample without replacement
-        random_hours = random.sample(range(0, 48), num_hrs_with_rain)
+        #random_hours = random.sample(range(0, 48), num_hrs_with_rain)
+        random_hours = np.random.randint(low=0, high=47, size=num_hrs_with_rain)
+        print random_hours
         for i in xrange(num_hrs_with_rain):
-            ppt[random_hours[i]] = rate
+            ppt[random_hours[i]] += rate
 
     return ppt
 
