@@ -7,7 +7,7 @@ AWAP weather generator functions
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-from math import pi, cos, sin, exp, sqrt, acos
+from math import pi, cos, sin, exp, sqrt, acos, asin
 import random
 
 __author__  = "Martin De Kauwe"
@@ -24,54 +24,35 @@ def main():
     SEC_2_DAY = 86400.0
     DAY_2_SEC = 1.0 / SEC_2_DAY
     UMOLPERJ = 4.57     # Conversion from J to umol quanta
-
+    lat = 51.5
+    lon = -0.13
+    hours = np.arange(48) / 2.0
     tmin = 2.0
     tmax = 24.0
     doy = 180.0
     sw_rad_day = 500.0 # mj m-2 d-1
 
     # MJ m-2 d-1 -> J m-2 s-1 = W m-2 -> MJ m-2 d-1
-    par_day = sw_rad_day * SW_2_PAR / 4.6
-    print sw_rad_day * MJ_TO_J * DAY_2_SEC * SW_2_PAR, "umol m-2 s-1"
-    #print par_day * MJ_TO_J * DAY_2_SEC * 4.6
-    print par_day, "MJ m-2 d-1"
-    print "......."
-    print
+    # all the other units conv cancel.
+    par_day = sw_rad_day * SW_2_PAR / UMOLPERJ
 
-
-    lat = 51.5
-    lon = -0.13
-    hours = np.arange(48) / 2.0
-
-    (par, day_length) = estimate_dirunal_par(doy, lat, sw_rad_day)
-
+    day_length = calc_day_length(doy, 365, lat)
+    print day_length
     cos_zenith = calculate_solar_geometry(doy, lat, lon)
-    (diffuse_frac) = spitters(doy, par_day, cos_zenith)
-    par_maestra = calc_par_hrly_maestra(par_day, cos_zenith, diffuse_frac)
+    diffuse_frac = spitters(doy, par_day, cos_zenith)
+    par = estimate_dirunal_par(par_day, cos_zenith, diffuse_frac)
 
-    elevation = 90.0 - 180.0 / pi * np.arccos(cos_zenith)
-
-    #fig, ax1 = plt.subplots()
-    #ax2 = ax1.twinx()
-    #l1, = ax1.plot(hours, elevation, "g-")
-    #l2, = ax2.plot(hours, np.ones(48) * diffuse_frac, "r-")
-    #l3, = ax2.plot(hours, np.ones(48) * (1.0-diffuse_frac), "b-")
-    #fig.legend((l1, l2, l3), ("Elevation", "Diffuse", "Direct"),
-    #           numpoints=1, loc="upper right")
-    #plt.show()
-
-    print "***", sw_rad_day, np.sum(par * PAR_2_SW * J_TO_MJ * 1800.0) , np.sum(par_maestra * PAR_2_SW * J_TO_MJ * 1800.0)
-    print "****", par_day, np.sum(par), np.sum(par_maestra)
-    print "factor", np.sum(par) / np.sum(par_maestra)
+    # check disaggregation
+    print sw_rad_day, np.sum(par * PAR_2_SW * J_TO_MJ * SEC_2_DAY), "MJ m-2 d-1"
+    print sw_rad_day * MJ_TO_J * DAY_2_SEC * SW_2_PAR, np.sum(par), "umol m-2 s-1"
 
 
-    plt.plot(hours, par/48., "r-")
-    plt.plot(hours, par_maestra, "b-", label="MAESTRA")
-    plt.ylabel("par ($\mu$mol m$^{-2}$ s$^{-1}$)")
+    plt.plot(hours, par, "b-")
+    plt.ylabel("par (umol m$^{-2}$ s$^{-1}$)")
     plt.xlabel("Hour of day")
-    plt.legend(numpoints=1, loc="best")
+    #plt.legend(numpoints=1, loc="best")
     plt.show()
-    sys.exit()
+
     tday = estimate_diurnal_temp(tmin, tmax, day_length)
     tday2 = maestra_diurnal_func(tmin, tmax, day_length)
 
@@ -81,8 +62,6 @@ def main():
     plt.ylabel("Air Temperature (deg C)")
     plt.xlabel("Hour of day")
     plt.show()
-
-    sys.exit()
 
     rain = 10.0
     ppt = disaggregate_rainfall(rain)
@@ -104,7 +83,19 @@ def main():
     plt.ylim(0, 3)
     plt.show()
 
-def calc_par_hrly_maestra(par_day, cos_zenith, diffuse_frac):
+def estimate_dirunal_par(par_day, cos_zenith, diffuse_frac):
+    """
+    Calculate daily course of incident PAR from daily totals
+
+    Arguments:
+    ----------
+    par_day : double
+        daily total photosynthetically active radiation (MJ m-2 d-1)
+    cos_zenith : float
+        cosine of zenith angle (radians)
+    diffuse_frac : float
+        fraction of par which is diffuse [0-1]
+    """
 
     # Transmissivity of atmosphere
     tau = 0.76
@@ -154,99 +145,13 @@ def calc_par_hrly_maestra(par_day, cos_zenith, diffuse_frac):
 
     return par
 
-def estimate_dirunal_par(doy, lat, sw_rad_day):
-
-    SEC_2_DAY = 86400.0
-    DAY_2_SEC = 1.0 / SEC_2_DAY
-    SW_2_PAR = 2.3
-    MJ_TO_J = 1E6
-
-    # Solar constant [MJ/m2/day]
-    solar_constant = 1370.0 * SEC_2_DAY / 1E6
-
-    # convert to radians
-    rlat  = lat * np.pi / 180.0
-    ryear = 2.0 * np.pi * (doy - 1.0) / 365.0
-
-    # Declination in radians (Paltridge and Platt eq [3.7])
-    rdec = (0.006918 - 0.399912 * np.cos(ryear) + 0.070257 *
-            np.sin(ryear) - 0.006758 * np.cos(2.0 * ryear) +
-            0.000907 * np.sin(2.0 * ryear) - 0.002697 *
-            np.cos(3.0  *ryear) + 0.001480 * np.sin(3.0 * ryear))
-
-    # Declination in degrees
-    dec = (180.0 / np.pi) * rdec
-
-    hour_angle = -np.tan(rlat) * np.tan(rdec)
-
-    # Half Day Length (radians), (dawn:noon = noon:dusk)
-    # Paltridge and Platt eq [3.21]
-    if hour_angle <= -1.0:
-        rhlf_day_length = np.pi            # polar summer: sun never sets
-    elif hour_angle >= 1.0:
-        rhlf_day_length = 0.0              # polar winter: sun never rises
-    else:
-        rhlf_day_length = np.arccos(hour_angle)
-
-    # hrs
-    day_length = 24.0 * 2.0 * rhlf_day_length / (2.0 * np.pi)
-
-
-    # Daily solar irradiance without atmosphere, normalised by solar constant,
-    # with both energy fluxes in MJ/m2/day, calculated from solar geometry
-    # Paltridge and Platt eq [3.22]
-    solar_norm = (rhlf_day_length * np.sin(rlat) * np.sin(rdec) +
-                  np.cos(rlat) * np.cos(rdec) * np.sin(rhlf_day_length)) / np.pi
-
-    # Observed daily solar irradiance as frac of value from solar geometry
-    # (should be < 1), sw_rad (MJ m-2 d-1)
-    solar_frac_obs = sw_rad_day / (solar_norm * solar_constant + 1.0E-6)
-
-
-    sw_rad = np.zeros(48)
-    par = np.zeros(48)
-
-    x = 0.0
-    y = 0.0
-
-    # disaggregate radiation
-    for i in xrange(1,48+1):
-        hour = i / 2.0
-
-        # Time in day frac (-0.5 to 0.5, zero at noon)
-        time_noon = float(hour) / 24.0 - 0.5
-
-        # Time in day frac (-Pi to Pi, zero at noon)
-        rtime = 2.0 * np.pi * time_noon
-
-        if (np.abs(rtime) < rhlf_day_length): # day: sun is up
-
-            # Paltridge and Platt eq [3.4]
-            sw_rad[i-1] = ((sw_rad_day / solar_norm) * (np.sin(rdec) *
-                            np.sin(rlat) + np.cos(rdec) * np.cos(rlat) *
-                            np.cos(rtime)))
-        else:
-            sw_rad[i-1] = 0.0
-
-        # Convert sw_rad (MJ/m2/day to J/m2/s = W/m2) to PAR (umol m-2 s-1)
-        #par[i-1] = sw_rad[i-1] /48. * MJ_TO_J * SW_2_PAR *DAY_2_SEC
-        #par[i-1] = sw_rad[i-1] * MJ_TO_J * DAY_2_SEC * SW_2_PAR
-
-
-    # check the integration worked?
-    difference = sw_rad_day - np.sum(sw_rad / 48.)
-    #print "*", difference, sw_rad_day, np.sum(sw_rad / 48.)
-
-    par = sw_rad * MJ_TO_J * DAY_2_SEC * SW_2_PAR
-
-    return (par, day_length)
-
 def estimate_diurnal_vpd(vpd09, vpd15, vpd09_next, vpd15_prev):
     """
     Interpolate VPD between 9am and 3pm values to generate diurnal VPD
     following the method of Haverd et al. This seems reasonable, vapour pressure
     plotted aginst time of day often does not reveal consistent patterns, with
     small fluctuations (see Kimball and Bellamy, 1986).
+
 
     Reference:
     ---------
@@ -269,12 +174,23 @@ def estimate_diurnal_vpd(vpd09, vpd15, vpd09_next, vpd15_prev):
 
     return vpd
 
-def disaggregate_rainfall(rain):
+def disaggregate_rainfall(rain_day):
     """
     Assign daily PPT total to hours of the day, following MAESTRA, which follows
     algorithm from GRAECO (model of D. Loustau).
 
+    Arguments:
+    ----------
+    rain_day : double
+        daily rainfall total (mm)
+
+    Returns:
+    ----------
+    rain : array
+        dirunal time course of rainfall (mm)
+
     Reference:
+    ----------
     * Loustau, D., F. Pluviaud, A. Bosc, A. Porte, P. Berbigier, M. Deque
       and V. Perarnaud. 2001. Impact of a regional 2 x CO2 climate scenario
       on the water balance, carbon balance and primary production
@@ -282,33 +198,33 @@ def disaggregate_rainfall(rain):
       Management of Plantation Forests. Ed. M. Tome. European
       Cultivated Forest Inst., EFI Proc. No. 41D, Bordeaux, pp 45-58.
     """
-    ppt = np.zeros(48)
+    rain = np.zeros(48)
 
     # All rain falls in one hour for light storms (<2 mm)
-    if rain <= 2.0:
+    if rain_day <= 2.0:
         hour_index = np.random.randint(low=0, high=47)
-        ppt[hour_index] = rain
+        rain[hour_index] = rain_day
 
     # All rain falls in 24 hours for storms >46 mm
-    elif rain > 46.0:
+    elif rain_day > 46.0:
         for i in xrange(48):
-            ppt[i] = rain / 48.0
+            rain[i] = rain_day / 48.0
 
     # Aim if for all rain to fall at 2mm/hour at a random time of the day.
     # If we generate the same random number, then we increase rainfall
     # for this hour
     else:
         #num_hrs_with_rain = min(int((rain / 2.0) * 48. / 24.), 48)
-        num_hrs_with_rain = int(rain / 2.0)
-        rate = rain / float(num_hrs_with_rain)
+        num_hrs_with_rain = int(rain_day / 2.0)
+        rate = rain_day / float(num_hrs_with_rain)
         # sample without replacement
         #random_hours = random.sample(range(0, 48), num_hrs_with_rain)
         random_hours = np.random.randint(low=0, high=47, size=num_hrs_with_rain)
         print random_hours
         for i in xrange(num_hrs_with_rain):
-            ppt[random_hours[i]] += rate
+            rain[random_hours[i]] += rate
 
-    return ppt
+    return rain
 
 def maestra_diurnal_func(tmin, tmax, day_length):
     """ Not sure where this function original comes from... """
@@ -345,6 +261,16 @@ def estimate_diurnal_temp(tmin, tmax, day_length):
     TO DO:
     - Hours between 00:00 and sunrise should be modelled using the previous
       days information.
+
+    Arguments:
+    ----------
+    tmin : double
+        day minimum temp (deg C)
+    tmax : float
+        day maximum temp (deg C)
+    day_length : float
+        length of day (hours)
+
 
     References:
     ----------
@@ -403,18 +329,16 @@ def calculate_solar_geometry(doy, latitude, longitude):
     Since these two angles are complementary, the cosine of either one of
     them equals the sine of the other, i.e. cos theta = sin beta. I will
     use cos_zen throughout code for simplicity.
+
     Arguments:
     ----------
-    params : p
-        params structure
     doy : double
         day of year
-    hod : double:
-        hour of the day [0.5 to 24]
-    cos_zen : double
-        cosine of the zenith angle of the sun in degrees (returned)
-    elevation : double
-        solar elevation (degrees) (returned)
+    latitude : float
+        latitude (degrees)
+    longitude : float
+        longitude (degrees)
+
     References:
     -----------
     * De Pury & Farquhar (1997) PCE, 20, 537-557.
@@ -445,16 +369,24 @@ def calculate_solar_geometry(doy, latitude, longitude):
 
     return cos_zenith
 
-
 def calculate_solar_noon(et, longitude):
     """
     Calculation solar noon - De Pury & Farquhar, '97: eqn A16
-    Reference:
+
+    Arguments:
     ----------
-    * De Pury & Farquhar (1997) PCE, 20, 537-557.
+    et : float
+        equation of time (radians)
+    longitude : float
+        longitude (degrees)
+
     Returns:
     ---------
     t0 - solar noon (hours).
+
+    Reference:
+    ----------
+    * De Pury & Farquhar (1997) PCE, 20, 537-557.
     """
     # all international standard meridians are multiples of 15deg east/west of
     # greenwich
@@ -466,22 +398,23 @@ def calculate_solar_noon(et, longitude):
 def round_to_value(number, roundto):
     return round(number / roundto) * roundto
 
-
-
 def calculate_solar_declination(doy, gamma):
     """
     Solar Declination Angle is a function of day of year and is indepenent
     of location, varying between 23deg45' to -23deg45'
+
     Arguments:
     ----------
     doy : int
         day of year, 1=jan 1
     gamma : double
         fractional year (radians)
+
     Returns:
     --------
     dec: float
         Solar Declination Angle [radians]
+
     Reference:
     ----------
     * De Pury & Farquhar (1997) PCE, 20, 537-557.
@@ -516,28 +449,35 @@ def calculate_hour_angle(t, t0):
 def day_angle(doy):
     """
     Calculation of day angle - De Pury & Farquhar, '97: eqn A18
+
+    Arguments:
+    ----------
+    doy : int
+        day of year
+
     Reference:
     ----------
     * De Pury & Farquhar (1997) PCE, 20, 537-557.
     * J. W. Spencer (1971). Fourier series representation of the position of
       the sun.
+
     Returns:
     ---------
     gamma - day angle in radians.
     """
 
-    return (2.0 * pi * (doy - 1.0) / 365.0)
+    return (2.0 * pi * (float(doy) - 1.0) / 365.0)
 
 def calculate_eqn_of_time(gamma):
     """
     Equation of time - correction for the difference btw solar time
     and the clock time.
+
     Arguments:
     ----------
-    doy : int
-        day of year
     gamma : double
         fractional year (radians)
+
     References:
     -----------
     * De Pury & Farquhar (1997) PCE, 20, 537-557.
@@ -562,12 +502,14 @@ def calc_extra_terrestrial_irradiance(doy, cos_zen):
     extra-terrestrial radiation. The value varies a little with the earths
     orbit.
     Using formula from Spitters not Leuning!
+
     Arguments:
     ----------
     doy : double
         day of year
-    cos_zenith : double
+    cos_zen : double
         cosine of zenith angle (radians)
+
     Returns:
     --------
     So : float
@@ -593,8 +535,8 @@ def calc_extra_terrestrial_irradiance(doy, cos_zen):
 
 def spitters(doy, par, cos_zenith):
     """
-    Spitters algorithm to estimate the diffuse component from the measured
-    irradiance.
+    Spitters algorithm to estimate the diffuse component from the total daily
+    incident radiation.
 
     NB. Eqns. 2a-d, not 20a-d
 
@@ -603,7 +545,7 @@ def spitters(doy, par, cos_zenith):
     doy : int
         day of year
     par : double
-        photosynthetically active radiation (W m-2)
+        daily total photosynthetically active radiation (MJ m-2 d-1)
     cos_zenith : float
         cosine of zenith angle (radians)
 
@@ -619,6 +561,7 @@ def spitters(doy, par, cos_zenith):
       implications for modeling canopy photosynthesis. Part I. Components of
       incoming radiation. Agricultural Forest Meteorol., 38:217-229.
     """
+
     # Fraction of global radiation that is PAR
     fpar = 0.5
     SEC_2_HFHR = 1800.0
@@ -627,10 +570,11 @@ def spitters(doy, par, cos_zenith):
 
     # Calculate extra-terrestrial radiation
     S0 = 0.0
-    for i in xrange(1, 48+1):
-        zenith = 180.0 / pi * acos(cos_zenith[i-1]) # degrees
-        S0 += calc_extra_terrestrial_irradiance(doy, cos(zenith)) * CONV
+    for i in xrange(48):
+        cos_zen = cos(acos(cos_zenith[i]) * 180.0 / pi) # degrees
+        S0 += calc_extra_terrestrial_irradiance(doy, cos_zen) * CONV
 
+    # Spitter's formula (Eqns. 2a-d)
     trans = (par / fpar) / S0
     if trans < 0.07:
         diffuse_frac = 1.0
@@ -642,6 +586,39 @@ def spitters(doy, par, cos_zenith):
         diffuse_frac = 0.23
 
     return (diffuse_frac)
+
+def calc_day_length(doy, yr_days, latitude):
+
+    """
+    Daylength in hours
+    Eqns come from Leuning A4, A5 and A6, pg. 1196
+
+    Reference:
+    ----------
+    Leuning et al (1995) Plant, Cell and Environment, 18, 1183-1200.
+
+    Parameters:
+    -----------
+    doy : int
+        day of year, 1=jan 1
+    yr_days : int
+        number of days in a year, 365 or 366
+    latitude : float
+        latitude [degrees]
+
+    Returns:
+    --------
+    dayl : float
+        daylength [hrs]
+    """
+
+    deg2rad = pi / 180.0;
+    rlat = latitude * deg2rad;
+    sindec = -sin(23.5 * deg2rad) * cos(2.0 * pi * (doy + 10.0) / yr_days);
+    a = sin(rlat) * sindec;
+    b = cos(rlat) * cos(asin(sindec));
+
+    return 12.0 * (1.0 + (2.0 / pi) * asin(a / b))
 
 
 if __name__ == "__main__":
