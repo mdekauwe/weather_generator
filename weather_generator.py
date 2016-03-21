@@ -85,7 +85,8 @@ def main():
 
 def estimate_dirunal_par(par_day, cos_zenith, diffuse_frac):
     """
-    Calculate daily course of incident PAR from daily totals
+    Calculate daily course of incident PAR from daily totals using routinue
+    from MAESTRA
 
     Arguments:
     ----------
