@@ -27,10 +27,10 @@ def main():
     (par, day_length) = estimate_dirunal_par(lat, doy, sw_rad_day)
 
 
-    plt.plot(hours, par, "r-")
-    plt.ylabel("par ($\mu$mol m$^{-2}$ s$^{-1}$)")
-    plt.xlabel("Hour of day")
-    plt.show()
+    #plt.plot(hours, par, "r-")
+    #plt.ylabel("par ($\mu$mol m$^{-2}$ s$^{-1}$)")
+    #plt.xlabel("Hour of day")
+    #plt.show()
 
     tday = estimate_diurnal_temp(tmin, tmax, day_length)
     tday2 = maestra_diurnal_func(tmin, tmax, day_length)
@@ -41,6 +41,8 @@ def main():
     plt.ylabel("Air Temperature (deg C)")
     plt.xlabel("Hour of day")
     plt.show()
+
+    sys.exit()
 
     rain = 10.0
     ppt = disaggregate_rainfall(rain)
@@ -221,16 +223,20 @@ def maestra_diurnal_func(tmin, tmax, day_length):
     tampl = (tmax - tmin) / 2.0
 
     tday = np.zeros(48)
-    for i in xrange(48):
+    for i in xrange(1, 48+1):
         hrtime = i - 0.5
         time = i + day_length * 0.5 - 48.0 / 2.0
         if time < 0.0 or time > day_length:
             if time < 0.0:
                 hrtime += 48
-            tday[i] = tav - (tav - tmin) * (hrtime - day_length * 0.5 - \
-                                            (48.0 / 2.0)) / (48.0 - day_length)
+
+            arg1 = tav
+            arg2 = (tav - tmin) * (hrtime - day_length * 0.5 - (48.0 / 2.0))
+            arg3 = 48.0 - day_length
+
+            tday[i-1] = arg1 - arg2 / arg3
         else:
-            tday[i] = tav - tampl * cos(1.5 * pi * time / day_length)
+            tday[i-1] = tav - tampl * cos(1.5 * pi * time / day_length)
 
     return (tday)
 
@@ -267,13 +273,13 @@ def estimate_diurnal_temp(tmin, tmax, day_length):
     tset = (tmax - tmin) * sin(pi * m / (day_length + 2.0 * a)) + tmin
 
     tday = np.zeros(48)
-    for i in xrange(48):
+    for i in xrange(1, 48+1):
         hour = i / 2.0
 
         # hour - time of the minimum temperature (accounting for lag time)
         m = hour - sunrise + c
         if hour >= sunrise and hour <= sunset:
-            tday[i] = tmin + (tmax - tmin) * \
+            tday[i-1] = tmin + (tmax - tmin) * \
                         sin((pi * m) / (day_length + 2.0 * a))
         else:
             if hour > sunset:
@@ -287,7 +293,7 @@ def estimate_diurnal_temp(tmin, tmax, day_length):
             # includes missing displacement to allow T to reach Tmin, this
             # removes a discontinuity in the original Parton and Logan eqn.
             # See Kimball and Bellamy (1986) Energy in Agriculture, 5, 185-197
-            tday[i] = (tmin -d) + (tset - tmin - d) * \
+            tday[i-1] = (tmin -d) + (tset - tmin - d) * \
                         exp(-b * n / (night_length + c))
 
 
