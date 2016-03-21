@@ -230,7 +230,7 @@ def estimate_dirunal_par(doy, lat, sw_rad_day):
             sw_rad[i-1] = 0.0
 
         # Convert sw_rad (MJ/m2/day to J/m2/s = W/m2) to PAR (umol m-2 s-1)
-        par[i-1] = sw_rad[i-1] * MJ_TO_J * DAY_2_SEC * SW_2_PAR
+        par[i-1] = sw_rad[i-1] * MJ_TO_J * SW_2_PAR * DAY_2_SEC
         x += par[i-1]
     print
     print x
