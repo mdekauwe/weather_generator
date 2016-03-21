@@ -29,7 +29,7 @@ def main():
 
     (par, day_length) = estimate_dirunal_par(lat, doy, sw_rad_day)
 
-    (elevation, cos_zenith) = calculate_solar_geometry(doy, lat, lon)
+    (cos_zenith) = calculate_solar_geometry(doy, lat, lon)
     (diffuse_frac) = spitters(doy, sw_rad_wm2, cos_zenith)
     par_maestra = calc_par_hrly_maestra(sw_rad_wm2, cos_zenith, diffuse_frac)
 
@@ -103,9 +103,9 @@ def calc_par_hrly_maestra(sw, cos_zenith, diffuse_frac):
         hrtime = float(i) - 0.5
 
         if cos_zenith[i-1] > 0.0:
-            zenith = acos(cos_zenith[i-1])
+            zenith = 180.0 / pi * acos(cos_zenith[i-1])
             if zenith < 80.0 * PID180: #Set FBM = 0.0 for ZEN > 80 degrees
-                cos_bm[i-1] = cos_zenith[i-1] * TAU **(1.0 / cos_zenith[i-1])
+                cos_bm[i-1] = cos_zenith[i-1] * TAU**(1.0 / cos_zenith[i-1])
             else:
                 cos_bm[i-1] = 0.0
 
@@ -403,7 +403,6 @@ def calculate_solar_geometry(doy, latitude, longitude):
     * De Pury & Farquhar (1997) PCE, 20, 537-557.
     """
 
-    elevation = np.zeros(48)
     cos_zenith = np.zeros(48)
     for i in xrange(1, 48+1):
         # need to convert 30 min data, 0-47 to 0-23.5
@@ -424,10 +423,10 @@ def calculate_solar_geometry(doy, latitude, longitude):
         elif cos_zenith[i-1] < 0.0:
             cos_zenith[i-1] = 0.0
 
-        zenith_angle = 180.0 / pi * (acos(cos_zenith[i-1]))
-        elevation[i-1] = 90.0 - zenith_angle
+        zenith = 180.0 / pi * acos(cos_zenith[i-1])
+        elevation = 90.0 - zenith
 
-    return (elevation, cos_zenith)
+    return cos_zenith
 
 
 def calculate_solar_noon(et, longitude):
