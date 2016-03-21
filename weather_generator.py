@@ -31,7 +31,7 @@ def main():
 
     cos_zenith = calculate_solar_geometry(doy, lat, lon)
     (diffuse_frac) = spitters(doy, sw_rad_wm2, cos_zenith)
-    par_maestra = calc_par_hrly_maestra(sw_rad_wm2, cos_zenith, diffuse_frac)
+    par_maestra = calc_par_hrly_maestra(sw_rad_day, cos_zenith, diffuse_frac)
 
 
     elevation = 90.0 - 180.0 / pi * np.arccos(cos_zenith)
@@ -85,7 +85,7 @@ def main():
     plt.ylim(0, 3)
     plt.show()
 
-def calc_par_hrly_maestra(sw, cos_zenith, diffuse_frac):
+def calc_par_hrly_maestra(sw_rad_day, cos_zenith, diffuse_frac):
 
     MJ_TO_J = 1E6
     TAU = 0.76
@@ -117,27 +117,29 @@ def calc_par_hrly_maestra(sw, cos_zenith, diffuse_frac):
             sum_bm += cos_bm[i-1]
             sum_df += cos_df[i-1]
 
-    par = np.zeros(48)
+    sw_rad = np.zeros(48)
     chk = np.zeros(48)
     for i in xrange(1,48+1):
 
         if sum_bm > 0.0:
-            rdbm = sw * direct_frac[i-1] * cos_bm[i-1] / sum_bm
+            rdbm = sw_rad_day * direct_frac[i-1] * cos_bm[i-1] / sum_bm
         else:
             rdbm = 0.0
 
         if sum_df > 0.0:
-            rddf = sw * diffuse_frac[i-1] * cos_df[i-1] / sum_df
+            rddf = sw_rad_day * diffuse_frac[i-1] * cos_df[i-1] / sum_df
         else:
             rddf = 0.0
 
-        # Convert sw_rad (MJ/m2/day to J/m2/s = W/m2) to PAR (umol m-2 s-1)
-        par[i-1] = (rddf + rdbm) * MJ_TO_J * DAY_2_SEC * SW_2_PAR
-        chk[i-1] = (rddf + rdbm)
+        sw_rad[i-1] = (rddf + rdbm)
+
 
     # check the integration worked? units here are W m-2
-    difference = (sw / 11.57) - np.sum(chk / 48.)
-    print "**", difference, (sw / 11.57), np.sum(chk / 48.)
+    difference = sw_rad_day - np.sum(sw_rad / 48.)
+    print "**", difference, sw_rad_day, np.sum(sw_rad / 48.)
+
+    # Convert sw_rad (MJ/m2/day to J/m2/s = W/m2) to PAR (umol m-2 s-1)
+    par = sw_rad * MJ_TO_J * DAY_2_SEC * SW_2_PAR
 
     return par
 
@@ -189,7 +191,6 @@ def estimate_dirunal_par(lat, doy, sw_rad_day):
     solar_frac_obs = sw_rad_day / (solar_norm * solar_constant + 1.0E-6)
 
     sw_rad = np.zeros(48)
-    par = np.zeros(48)
 
     # disaggregate radiation
     for i in xrange(1,48+1):
@@ -216,15 +217,12 @@ def estimate_dirunal_par(lat, doy, sw_rad_day):
         else:
             sw_rad[i-1] = 0.0
 
-        # Convert sw_rad (MJ/m2/day to J/m2/s = W/m2) to PAR (umol m-2 s-1)
-        par[i-1] = sw_rad[i-1] * MJ_TO_J * DAY_2_SEC * SW_2_PAR
-
     # check the integration worked?
     difference = sw_rad_day - np.sum(sw_rad / 48.)
     print "*", difference, sw_rad_day, np.sum(sw_rad / 48.)
 
     # Convert sw_rad (MJ/m2/day to J/m2/s = W/m2) to PAR (umol m-2 s-1)
-    #par = sw_rad * MJ_TO_J * (1.0 / 86400.0) * SW_2_PAR
+    par = sw_rad * MJ_TO_J * DAY_2_SEC * SW_2_PAR
 
     return (par, day_length)
 
@@ -603,12 +601,13 @@ def spitters(doy, sw_rad, cos_zenith):
     ----------
     doy : int
         day of year
-    par : double
-        total par measured [umol m-2 s-1]
+    sw_rad : double
+        shortwave radiation [W m-2]
     Returns:
     -------
     diffuse : double
         diffuse component of incoming radiation
+
     References:
     ----------
     * Spitters, C. J. T., Toussaint, H. A. J. M. and Goudriaan, J. (1986)
@@ -627,6 +626,7 @@ def spitters(doy, sw_rad, cos_zenith):
 
         # atmospheric transmisivity #
         tau = estimate_clearness(sw_rad, So)
+        #tau = 0.76
 
         # For zenith angles > 80 degrees, diffuse_frac = 1.0
         if cos_zenith[i-1] > 0.17:
@@ -648,8 +648,6 @@ def spitters(doy, sw_rad, cos_zenith):
             diffuse_frac[i-1] = 0.0
         elif diffuse_frac[i-1] >= 1.0:
             diffuse_frac[i-1]= 1.0
-
-
 
     return (diffuse_frac)
 
