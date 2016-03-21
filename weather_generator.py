@@ -41,8 +41,8 @@ def main():
     fig, ax1 = plt.subplots()
     ax2 = ax1.twinx()
     l1, = ax1.plot(hours, elevation, "g-")
-    l2, = ax2.plot(hours, diffuse_frac, "r-")
-    l3, = ax2.plot(hours, 1.0-diffuse_frac, "b-")
+    l2, = ax2.plot(hours, np.ones(48) * diffuse_frac, "r-")
+    l3, = ax2.plot(hours, np.ones(48) * (1.0-diffuse_frac), "b-")
     fig.legend((l1, l2, l3), ("Elevation", "Diffuse", "Direct"),
                numpoints=1, loc="upper right")
     plt.show()
