@@ -165,14 +165,14 @@ def estimate_diurnal_vpd(vpd09, vpd15, vpd09_next, vpd15_prev):
     gap = 18.0
 
     vpd = np.zeros(48)
-    for i in xrange(48):
+    for i in xrange(1, 48+1):
         hour = i / 2.0
         if hour <= 9.0:
-           vpd[i] = vpd15_prev + (vpd09 - vpd15_prev) * (9.0 + hour) / gap
+           vpd[i-1] = vpd15_prev + (vpd09 - vpd15_prev) * (9.0 + hour) / gap
         elif hour > 9.0 and hour <= 15.0:
-           vpd[i] = vpd09 + (vpd15 - vpd09) * (hour - 9.0) / (15.0 - 9.0)
+           vpd[i-1] = vpd09 + (vpd15 - vpd09) * (hour - 9.0) / (15.0 - 9.0)
         elif hour > 15.0:
-            vpd[i] =  vpd15 + (vpd09_next - vpd15) * (hour - 15.0) / gap
+            vpd[i-1] =  vpd15 + (vpd09_next - vpd15) * (hour - 15.0) / gap
 
     return vpd
 
