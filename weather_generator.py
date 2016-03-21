@@ -18,6 +18,7 @@ __email__   = "mdekauwe@gmail.com"
 def main():
 
     SW_2_PAR = 2.3
+    PAR_2_SW = 1.0 / SW_2_PAR
     J_TO_MJ = 1E-6
     MJ_TO_J = 1E6
     SEC_2_DAY = 86400.0
@@ -48,11 +49,6 @@ def main():
     (diffuse_frac) = spitters(doy, par_day, cos_zenith)
     par_maestra = calc_par_hrly_maestra(par_day, cos_zenith, diffuse_frac)
 
-    #par = sw_rad * MJ_TO_J * DAY_2_SEC * SW_2_PAR
-
-    print "x", sw_rad_day, np.sum(par_maestra / 2.3 * 1E-6 * 86400.0)
-
-
     elevation = 90.0 - 180.0 / pi * np.arccos(cos_zenith)
 
     #fig, ax1 = plt.subplots()
@@ -64,7 +60,7 @@ def main():
     #           numpoints=1, loc="upper right")
     #plt.show()
 
-    print "***", sw_rad_day, np.sum(par * 1800.0 / 2.3 * 1E-6), np.sum(par_maestra * 1800.0 / 2.3 * 1E-6)
+    print "***", sw_rad_day, np.sum(par * PAR_2_SW * J_TO_MJ * 1800.0), np.sum(par_maestra * PAR_2_SW * J_TO_MJ * 86400.0)
     print "****", par_day, np.sum(par), np.sum(par_maestra), np.sum(par) / np.sum(par_maestra)
 
     plt.plot(hours, par, "r-")
