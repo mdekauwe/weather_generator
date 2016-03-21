@@ -17,12 +17,13 @@ __email__   = "mdekauwe@gmail.com"
 
 def main():
 
+    SW_2_PAR = 2.3
     tmin = 2.0
     tmax = 24.0
     doy = 180.0
     sw_rad_day = 50.0 # mj
     sw_rad_wm2 = sw_rad_day * 11.57
-
+    par_day = sw_rad_wm2 * SW_2_PAR
     lat = 51.5
     lon = -0.13
     hours = np.arange(48) / 2.0
@@ -31,6 +32,16 @@ def main():
 
     cos_zenith = calculate_solar_geometry(doy, lat, lon)
     (diffuse_frac) = spitters(doy, sw_rad_wm2, cos_zenith)
+    (diffuse_frac_maestra) =spitters_maestra(doy, par_day, cos_zenith)
+
+    plt.plot(hours, diffuse_frac, "r-", label="mine")
+    plt.plot(hours, np.ones(len(hours)) * diffuse_frac_maestra, "b-", label="MAESTRA")
+    plt.xlabel("Hour of day")
+    plt.legend(numpoints=1, loc="best")
+    plt.show()
+
+
+    sys.exit()
     par_maestra = calc_par_hrly_maestra(sw_rad_day, cos_zenith, diffuse_frac)
 
 
@@ -591,6 +602,53 @@ def estimate_clearness(sw_rad, So):
         tau = 0.0
 
     return (tau)
+
+def spitters_maestra(doy, par, cos_zenith):
+
+    PID180 = pi / 180.0
+    PID2 = pi / 2.0
+    KHRS = 48.0
+    FPAR = 0.5          # Fraction of global radiation that is PAR
+    sperhr = 3600.0 * 24.0 / KHRS
+
+    # Calculate extra-terrestrial radiation
+    S0 = 0.0
+    for i in xrange(1, 48+1):
+        zenith = 180.0 / pi * acos(cos_zenith[i-1])
+        sinb = sin(PID2 - zenith)
+        S0 += etrad(doy, sinb) * sperhr / 1E6
+
+
+    # Spitter's formula
+    trans = (par / FPAR) / S0
+    if trans < 0.07:
+        diffuse_frac = 1.
+    elif trans < 0.35:
+        diffuse_frac = 1. - 2.3 * (trans - 0.07)**2
+    elif trans < 0.75:
+        diffuse_frac = 1.33 - 1.46 * trans
+    else:
+        diffuse_frac = 0.23
+
+    return (diffuse_frac)
+
+
+def etrad(doy, sinb):
+    """
+    Calculate the radiation incident on the atmosphere.
+    Using formulae from Spitters et al (1986) Agric For Met 38:217
+    Returns value in J m-2 s-1.
+    """
+
+    SOLARC = 1370       # Solar constant (J m-2 s-1)
+
+    # Spitters' formula
+    if sinb > 0.0:
+        etrad = SOLARC * (1 + 0.033 * cos(float(doy) / 365.0 * 2.0 * pi)) * sinb
+    else:
+        etrad = 0.0
+
+    return etrad
 
 
 def spitters(doy, sw_rad, cos_zenith):
