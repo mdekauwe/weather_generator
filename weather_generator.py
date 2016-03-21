@@ -32,15 +32,7 @@ def main():
 
     cos_zenith = calculate_solar_geometry(doy, lat, lon)
     (diffuse_frac) = spitters(doy, sw_rad_wm2, cos_zenith)
-    (diffuse_frac_maestra) =spitters_maestra(doy, par_day, cos_zenith)
 
-    plt.plot(hours, diffuse_frac, "r-", label="mine")
-    plt.plot(hours, diffuse_frac_maestra, "b-", label="MAESTRA")
-    plt.xlabel("Hour of day")
-    plt.legend(numpoints=1, loc="best")
-    plt.show()
-
-    #sys.exit()
 
 
     par_maestra = calc_par_hrly_maestra(sw_rad_day, cos_zenith, diffuse_frac_maestra)
@@ -616,62 +608,22 @@ def estimate_clearness(sw_rad, So):
 
     return (tau)
 
-def spitters_maestra(doy, par, cos_zenith):
-
-    FPAR = 0.5          # Fraction of global radiation that is PAR
-    SEC_2_HFHR = 1800.0
-    J_TO_MJ = 1E-6
-    conv = SEC_2_HFHR * J_TO_MJ
-
-    # Calculate extra-terrestrial radiation
-    S0 = 0.0
-    for i in xrange(1, 48+1):
-        zenith = 180.0 / pi * acos(cos_zenith[i-1])
-        S0 += calc_extra_terrestrial_irradiance(doy, cos(zenith)) * conv
-
-    # Spitter's formula
-    trans = (par / FPAR) / S0
-    if trans < 0.07:
-        diffuse_frac = 1.
-    elif trans < 0.35:
-        diffuse_frac = 1. - 2.3 * (trans - 0.07)**2
-    elif trans < 0.75:
-        diffuse_frac = 1.33 - 1.46 * trans
-    else:
-        diffuse_frac = 0.23
-
-    diffuse_frac = np.ones(48) * diffuse_frac
-
-    return (diffuse_frac)
-
-def etrad(doy, sinb):
-    """
-    Calculate the radiation incident on the atmosphere.
-    Using formulae from Spitters et al (1986) Agric For Met 38:217
-    Returns value in J m-2 s-1.
-    """
-
-    # Solar constant (J m-2 s-1)
-    Sc = 1370.0
-
-    # Spitters' formula
-    if sinb > 0.0:
-        etrad = Sc * (1.0 + 0.033 * cos(float(doy) / 365.0 * 2.0 * pi)) * sinb
-    else:
-        etrad = 0.0
-
-    return etrad
-
-def spitters(doy, sw_rad, cos_zenith):
+def spitters(doy, par, cos_zenith):
     """
     Spitters algorithm to estimate the diffuse component from the measured
     irradiance.
+
+    NB. Eqns. 2a-d, not 20a-d
+
     Parameters:
     ----------
     doy : int
         day of year
-    sw_rad : double
-        shortwave radiation [W m-2]
+    par : double
+        photosynthetically active radiation (W m-2)
+    cos_zenith : float
+        cosine of zenith angle (radians)
+
     Returns:
     -------
     diffuse : double
@@ -684,41 +636,32 @@ def spitters(doy, sw_rad, cos_zenith):
       implications for modeling canopy photosynthesis. Part I. Components of
       incoming radiation. Agricultural Forest Meteorol., 38:217-229.
     """
+    # Fraction of global radiation that is PAR
+    fpar = 0.5
+    SEC_2_HFHR = 1800.0
+    J_TO_MJ = 1E-6
+    CONV = SEC_2_HFHR * J_TO_MJ
 
-    diffuse_frac = np.zeros(48)
-    direct_frac = np.zeros(48)
+    # Calculate extra-terrestrial radiation
+    S0 = 0.0
     for i in xrange(1, 48+1):
-        # need to convert 30 min data, 0-47 to 0-23.5
-        hod = i / 2.0
+        zenith = 180.0 / pi * acos(cos_zenith[i-1]) # degrees
+        S0 += calc_extra_terrestrial_irradiance(doy, cos(zenith)) * CONV
 
-        So = calc_extra_terrestrial_irradiance(doy, cos_zenith[i-1]);
+    trans = (par / fpar) / S0
+    if trans < 0.07:
+        diffuse_frac = 1.0
+    elif trans < 0.35:
+        diffuse_frac = 1.0 - 2.3 * (trans - 0.07)**2
+    elif trans < 0.75:
+        diffuse_frac = 1.33 - 1.46 * trans
+    else:
+        diffuse_frac = 0.23
 
-        # atmospheric transmisivity #
-        tau = estimate_clearness(sw_rad, So)
-        #tau = 0.76
-
-        # For zenith angles > 80 degrees, diffuse_frac = 1.0
-        if cos_zenith[i-1] > 0.17:
-            # the ratio between diffuse and total Solar irradiance (R), eqn 20
-            R = 0.847 - 1.61 * cos_zenith[i-1] + 1.04 * cos_zenith[i-1]**2
-            K = (1.47 - R) / 1.66
-            if tau <= 0.22:
-                diffuse_frac[i-1] = 1.0;
-            elif tau > 0.22 and tau <= 0.35:
-                diffuse_frac[i-1] = 1.0 - 6.4 * (tau - 0.22)**2
-            elif tau > 0.35 and tau <= K:
-                diffuse_frac[i-1] = 1.47 - 1.66 * tau
-            else:
-                diffuse_frac[i-1] = R
-        else:
-            diffuse_frac[i-1] = 1.0
-
-        if diffuse_frac[i-1] <= 0.0:
-            diffuse_frac[i-1] = 0.0
-        elif diffuse_frac[i-1] >= 1.0:
-            diffuse_frac[i-1]= 1.0
+    diffuse_frac = np.ones(48) * diffuse_frac
 
     return (diffuse_frac)
+
 
 if __name__ == "__main__":
 
