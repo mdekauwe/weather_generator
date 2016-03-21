@@ -18,11 +18,25 @@ __email__   = "mdekauwe@gmail.com"
 def main():
 
     SW_2_PAR = 2.3
+    J_TO_MJ = 1E-6
+    MJ_TO_J = 1E6
+    SEC_2_DAY = 86400.0
+    DAY_2_SEC = 1.0 / SEC_2_DAY
+    UMOLPERJ = 4.57     # Conversion from J to umol quanta
+
     tmin = 2.0
     tmax = 24.0
     doy = 180.0
     sw_rad_day = 100.0 # mj m-2 d-1
-    par_day = sw_rad_day * 11.5740741 * SW_2_PAR # umol m-2 s-1
+
+    # MJ m-2 d-1 -> J m-2 s-1 = W m-2 -> MJ m-2 d-1
+    par_day = sw_rad_day * SW_2_PAR / 4.6
+    print sw_rad_day * MJ_TO_J * DAY_2_SEC * SW_2_PAR, "umol m-2 s-1"
+    #print par_day * MJ_TO_J * DAY_2_SEC * 4.6
+    print par_day, "MJ m-2 d-1"
+    print "......."
+    print
+
 
     lat = 51.5
     lon = -0.13
@@ -50,9 +64,9 @@ def main():
     #           numpoints=1, loc="upper right")
     #plt.show()
 
-    print "***", sw_rad_day, np.sum(par) / 2.3 * 1E-6 * 1800.0, np.sum(par_maestra) / 2300000.0 * 1800.0
-    print
-    print "****", sw_rad_day, np.sum(par) / 2.3 * 1E-6 * 1800.0, np.sum(par_maestra) / 48.
+    print "***", sw_rad_day, np.sum(par * 1800.0 / 2.3 * 1E-6), np.sum(par_maestra * 1800.0 / 2.3 * 1E-6)
+    print "****", par_day, np.sum(par), np.sum(par_maestra), np.sum(par) / np.sum(par_maestra)
+
     plt.plot(hours, par, "r-")
     plt.plot(hours, par_maestra, "b-", label="MAESTRA")
     plt.ylabel("par ($\mu$mol m$^{-2}$ s$^{-1}$)")
@@ -94,21 +108,19 @@ def main():
 
 def calc_par_hrly_maestra(par_day, cos_zenith, diffuse_frac):
 
+    # Transmissivity of atmosphere
+    tau = 0.76
+    direct_frac = 1.0 - diffuse_frac
     MJ_TO_J = 1E6
-    TAU = 0.76
-    DAY_2_SEC = 1.0 / 86400.0
-    SW_2_PAR = 2.3
-
-    PID180 = pi / 180.0
-
-    sum_bm = 0.0
-    sum_df = 0.0
+    UMOLPERJ = 4.57     # Conversion from J to umol quanta
+    SEC_2_DAY = 86400.0
+    DAY_2_SEC = 1.0 / SEC_2_DAY
 
     cos_bm = np.zeros(48)
     cos_df = np.zeros(48)
 
-    direct_frac = 1.0 - diffuse_frac
-
+    sum_bm = 0.0
+    sum_df = 0.0
     for i in xrange(1,48+1):
 
         hrtime = float(i) - 0.5
@@ -117,8 +129,8 @@ def calc_par_hrly_maestra(par_day, cos_zenith, diffuse_frac):
             zenith = acos(cos_zenith[i-1])
 
             # set FBM = 0.0 for ZEN > 80 degrees
-            if zenith < 80.0 * PID180:
-                cos_bm[i-1] = cos_zenith[i-1] * TAU**(1.0 / cos_zenith[i-1])
+            if zenith < 80.0 * pi / 180.0:
+                cos_bm[i-1] = cos_zenith[i-1] * tau**(1.0 / cos_zenith[i-1])
             else:
                 cos_bm[i-1] = 0.0
 
@@ -127,7 +139,6 @@ def calc_par_hrly_maestra(par_day, cos_zenith, diffuse_frac):
             sum_df += cos_df[i-1]
 
     par = np.zeros(48)
-    x = 0.0
     for i in xrange(1,48+1):
 
         if sum_bm > 0.0:
@@ -140,17 +151,8 @@ def calc_par_hrly_maestra(par_day, cos_zenith, diffuse_frac):
         else:
             rddf = 0.0
 
-        par[i-1] = (rddf + rdbm) #* 1800.0
-        x += rddf + rdbm
-
-    print par_day, x
-
-    # check the integration worked? units here are W m-2
-    difference = par_day - np.sum(par / 48.)
-    print "**", difference, par_day, np.sum(par / 48.)
-
-    # Convert sw_rad (MJ/m2/day to J/m2/s = W/m2) to PAR (umol m-2 s-1)
-    #par = sw_rad * MJ_TO_J * DAY_2_SEC * SW_2_PAR
+        # MJ m-2 d-1 -> J m-2 s-1 = W m-2 to umol m-2 s-1
+        par[i-1] = (rddf + rdbm) * MJ_TO_J * DAY_2_SEC * 4.6
 
     return par
 
@@ -191,6 +193,7 @@ def estimate_dirunal_par(doy, lat, sw_rad_day):
     # hrs
     day_length = 24.0 * 2.0 * rhlf_day_length / (2.0 * np.pi)
 
+
     # Daily solar irradiance without atmosphere, normalised by solar constant,
     # with both energy fluxes in MJ/m2/day, calculated from solar geometry
     # Paltridge and Platt eq [3.22]
@@ -201,12 +204,13 @@ def estimate_dirunal_par(doy, lat, sw_rad_day):
     # (should be < 1), sw_rad (MJ m-2 d-1)
     solar_frac_obs = sw_rad_day / (solar_norm * solar_constant + 1.0E-6)
 
+
     sw_rad = np.zeros(48)
     par = np.zeros(48)
-    x = 0.0
+
+
     # disaggregate radiation
     for i in xrange(1,48+1):
-
         hour = i / 2.0
 
         # Time in day frac (-0.5 to 0.5, zero at noon)
@@ -215,32 +219,29 @@ def estimate_dirunal_par(doy, lat, sw_rad_day):
         # Time in day frac (-Pi to Pi, zero at noon)
         rtime = 2.0 * np.pi * time_noon
 
-        #print hour, time_noon, rtime
         if (np.abs(rtime) < rhlf_day_length): # day: sun is up
+
             # Paltridge and Platt eq [3.4]
             sw_rad[i-1] = ((sw_rad_day / solar_norm) * (np.sin(rdec) *
                             np.sin(rlat) + np.cos(rdec) * np.cos(rlat) *
                             np.cos(rtime)))
-
-            # Need to half rad, as we are doing this over 48 timesteps and not
-            # 24, otherwise we will end up with a total which is double
-            # the sw_rad_tot
-            #sw_rad[i-1] /= 2.0
         else:
             sw_rad[i-1] = 0.0
 
+
+
         # Convert sw_rad (MJ/m2/day to J/m2/s = W/m2) to PAR (umol m-2 s-1)
-        par[i-1] = sw_rad[i-1] * MJ_TO_J * SW_2_PAR * DAY_2_SEC
-        x += par[i-1]
-    print
-    print x
-    print
+        #par[i-1] = sw_rad[i-1] /48. * MJ_TO_J * SW_2_PAR *DAY_2_SEC
+        #par[i-1] = sw_rad[i-1] * MJ_TO_J * DAY_2_SEC * SW_2_PAR
+
+
     # check the integration worked?
     difference = sw_rad_day - np.sum(sw_rad / 48.)
     print "*", difference, sw_rad_day, np.sum(sw_rad / 48.)
 
-    # Convert sw_rad (MJ/m2/day to J/m2/s = W/m2) to PAR (umol m-2 s-1)
-    #par = sw_rad * MJ_TO_J * DAY_2_SEC * SW_2_PAR
+    #2.3 * 1E-6 * 86400.0
+    par = sw_rad * MJ_TO_J * DAY_2_SEC * SW_2_PAR
+
 
     return (par, day_length)
 
