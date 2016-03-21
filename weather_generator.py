@@ -28,7 +28,7 @@ def main():
     tmin = 2.0
     tmax = 24.0
     doy = 180.0
-    sw_rad_day = 100.0 # mj m-2 d-1
+    sw_rad_day = 500.0 # mj m-2 d-1
 
     # MJ m-2 d-1 -> J m-2 s-1 = W m-2 -> MJ m-2 d-1
     par_day = sw_rad_day * SW_2_PAR / 4.6
@@ -60,10 +60,12 @@ def main():
     #           numpoints=1, loc="upper right")
     #plt.show()
 
-    print "***", sw_rad_day, np.sum(par * PAR_2_SW * J_TO_MJ * 1800.0), np.sum(par_maestra * PAR_2_SW * J_TO_MJ * 86400.0)
-    print "****", par_day, np.sum(par), np.sum(par_maestra), np.sum(par) / np.sum(par_maestra)
+    print "***", sw_rad_day, np.sum(par * PAR_2_SW * J_TO_MJ * 1800.0) , np.sum(par_maestra * PAR_2_SW * J_TO_MJ * 1800.0)
+    print "****", par_day, np.sum(par), np.sum(par_maestra)
+    print "factor", np.sum(par) / np.sum(par_maestra)
 
-    plt.plot(hours, par, "r-")
+
+    #plt.plot(hours, par, "r-")
     plt.plot(hours, par_maestra, "b-", label="MAESTRA")
     plt.ylabel("par ($\mu$mol m$^{-2}$ s$^{-1}$)")
     plt.xlabel("Hour of day")
@@ -204,6 +206,8 @@ def estimate_dirunal_par(doy, lat, sw_rad_day):
     sw_rad = np.zeros(48)
     par = np.zeros(48)
 
+    x = 0.0
+    y = 0.0
 
     # disaggregate radiation
     for i in xrange(1,48+1):
@@ -224,8 +228,6 @@ def estimate_dirunal_par(doy, lat, sw_rad_day):
         else:
             sw_rad[i-1] = 0.0
 
-
-
         # Convert sw_rad (MJ/m2/day to J/m2/s = W/m2) to PAR (umol m-2 s-1)
         #par[i-1] = sw_rad[i-1] /48. * MJ_TO_J * SW_2_PAR *DAY_2_SEC
         #par[i-1] = sw_rad[i-1] * MJ_TO_J * DAY_2_SEC * SW_2_PAR
@@ -233,11 +235,9 @@ def estimate_dirunal_par(doy, lat, sw_rad_day):
 
     # check the integration worked?
     difference = sw_rad_day - np.sum(sw_rad / 48.)
-    print "*", difference, sw_rad_day, np.sum(sw_rad / 48.)
+    #print "*", difference, sw_rad_day, np.sum(sw_rad / 48.)
 
-    #2.3 * 1E-6 * 86400.0
     par = sw_rad * MJ_TO_J * DAY_2_SEC * SW_2_PAR
-
 
     return (par, day_length)
 
