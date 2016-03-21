@@ -141,8 +141,8 @@ def estimate_dirunal_par(par_day, cos_zenith, diffuse_frac):
         else:
             rddf = 0.0
 
-        # MJ m-2 d-1 -> J m-2 s-1 = W m-2 to umol m-2 s-1
-        par[i-1] = (rddf + rdbm) * MJ_TO_J * DAY_2_SEC * 4.6
+        # MJ m-2 d-1 -> J m-2 s-1 -> umol m-2 s-1
+        par[i-1] = (rddf + rdbm) * MJ_TO_J * DAY_2_SEC * UMOLPERJ
 
     return par
 
