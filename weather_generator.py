@@ -21,7 +21,8 @@ def main():
     tmax = 24.0
     doy = 180.0
     sw_rad_day = 50.0 # mj
-    sw_rad_wm2 = sw_rad_day / 0.0864
+    sw_rad_wm2 = sw_rad_day * 11.57
+
     lat = 51.5
     lon = -0.13
     hours = np.arange(48) / 2.0
@@ -29,8 +30,8 @@ def main():
     (par, day_length) = estimate_dirunal_par(lat, doy, sw_rad_day)
 
     (elevation, cos_zenith) = calculate_solar_geometry(doy, lat, lon)
-    (direct_frac, diffuse_frac) = spitters(doy, sw_rad_wm2, cos_zenith)
-    par_maestra = calc_par_hrly_maestra(sw, cos_zenith, diffuse_frac, direct_frac)
+    (diffuse_frac) = spitters(doy, sw_rad_wm2, cos_zenith)
+    par_maestra = calc_par_hrly_maestra(sw_rad_wm2, cos_zenith, diffuse_frac)
 
     #fig, ax1 = plt.subplots()
     #ax2 = ax1.twinx()
@@ -40,12 +41,14 @@ def main():
     #plt.legend(numpoints=1, loc="best")
     #plt.show()
 
+    print sw_rad_day, sw_rad_wm2, np.sum(par) / 2.3 / 11.57, np.sum(par_maestra) / 2.3 / 11.57
     plt.plot(hours, par, "r-")
     plt.plot(hours, par_maestra, "b-", label="MAESTRA")
     plt.ylabel("par ($\mu$mol m$^{-2}$ s$^{-1}$)")
     plt.xlabel("Hour of day")
+    plt.legend(numpoints=1, loc="best")
     plt.show()
-
+    sys.exit()
     tday = estimate_diurnal_temp(tmin, tmax, day_length)
     tday2 = maestra_diurnal_func(tmin, tmax, day_length)
 
@@ -78,9 +81,11 @@ def main():
     plt.ylim(0, 3)
     plt.show()
 
-def calc_par_hrly_maestra(sw, cos_zenith, diffuse_frac, direct_frac):
+def calc_par_hrly_maestra(sw, cos_zenith, diffuse_frac):
 
+    TAU = 0.76
     sec_2_day = 86400.0
+    day_2_sec = 1.0 / sec_2_day
     SW_2_PAR = 2.3
 
     PID180 = pi / 180.0
@@ -90,6 +95,8 @@ def calc_par_hrly_maestra(sw, cos_zenith, diffuse_frac, direct_frac):
 
     cos_bm = np.zeros(48)
     cos_df = np.zeros(48)
+
+    direct_frac = 1.0 - diffuse_frac
 
     for i in xrange(1,48+1):
 
@@ -106,6 +113,7 @@ def calc_par_hrly_maestra(sw, cos_zenith, diffuse_frac, direct_frac):
             sum_bm += cos_bm[i-1]
             sum_df += cos_df[i-1]
 
+    par = np.zeros(48)
     for i in xrange(1,48+1):
 
         if sum_bm > 0.0:
@@ -118,8 +126,8 @@ def calc_par_hrly_maestra(sw, cos_zenith, diffuse_frac, direct_frac):
         else:
             rddf = 0.0
 
-    # Convert sw_rad (MJ/m2/day to W/m2) to PAR (umol m-2 s-1)
-    par = (rddf + rdbm) * 1E6 / sec_2_day * SW_2_PAR
+        # Convert sw_rad (MJ/m2/day to W/m2) to PAR (umol m-2 s-1)
+        par[i-1] = (rddf + rdbm) * 1E6 * SW_2_PAR * day_2_sec
 
     return par
 
@@ -129,6 +137,7 @@ def calc_par_hrly_maestra(sw, cos_zenith, diffuse_frac, direct_frac):
 def estimate_dirunal_par(lat, doy, sw_rad_day):
 
     sec_2_day = 86400.0
+    day_2_sec = 1.0 / sec_2_day
     day_2_hour = 1.0 / 24.0
     SW_2_PAR = 2.3
 
@@ -202,10 +211,10 @@ def estimate_dirunal_par(lat, doy, sw_rad_day):
     # integrated solar will be too high as we are using a limited number of
     # timseteps, so we need to figure out how wrong and correct things
     solar_extra = sw_rad_day - (np.sum(sw_rad) * day_2_hour)
-    #print solar_extra
+    print solar_extra
 
     # Convert sw_rad (MJ/m2/day to W/m2) to PAR (umol m-2 s-1)
-    par = sw_rad * 1E6 / sec_2_day * SW_2_PAR
+    par = sw_rad * 1E6 * SW_2_PAR * day_2_sec
 
     return (par, day_length)
 
@@ -631,9 +640,9 @@ def spitters(doy, sw_rad, cos_zenith):
         elif diffuse_frac[i-1] >= 1.0:
             diffuse_frac[i-1]= 1.0
 
-        direct_frac[i-1] = 1.0 - diffuse_frac[i-1]
 
-    return (direct_frac, diffuse_frac)
+
+    return (diffuse_frac)
 
 if __name__ == "__main__":
 
