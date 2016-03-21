@@ -30,16 +30,18 @@ def main():
 
     (elevation, cos_zenith) = calculate_solar_geometry(doy, lat, lon)
     (direct_frac, diffuse_frac) = spitters(doy, sw_rad_wm2, cos_zenith)
+    par_maestra = calc_par_hrly_maestra(sw, cos_zenith, diffuse_frac, direct_frac)
 
-    fig, ax1 = plt.subplots()
-    ax2 = ax1.twinx()
-    ax1.plot(hours, elevation, "g-", label="elevation")
-    ax2.plot(hours, diffuse_frac, "r-", label="Diffuse")
-    ax2.plot(hours, direct_frac, "b-", label="Direct")
-    plt.legend(numpoints=1, loc="best")
-    plt.show()
+    #fig, ax1 = plt.subplots()
+    #ax2 = ax1.twinx()
+    #ax1.plot(hours, elevation, "g-", label="elevation")
+    #ax2.plot(hours, diffuse_frac, "r-", label="Diffuse")
+    #ax2.plot(hours, direct_frac, "b-", label="Direct")
+    #plt.legend(numpoints=1, loc="best")
+    #plt.show()
 
     plt.plot(hours, par, "r-")
+    plt.plot(hours, par_maestra, "b-", label="MAESTRA")
     plt.ylabel("par ($\mu$mol m$^{-2}$ s$^{-1}$)")
     plt.xlabel("Hour of day")
     plt.show()
@@ -75,6 +77,53 @@ def main():
     plt.xlabel("Hour of day")
     plt.ylim(0, 3)
     plt.show()
+
+def calc_par_hrly_maestra(sw, cos_zenith, diffuse_frac, direct_frac):
+
+    sec_2_day = 86400.0
+    SW_2_PAR = 2.3
+
+    PID180 = pi / 180.0
+
+    sum_bm = 0.0
+    sum_df = 0.0
+
+    cos_bm = np.zeros(48)
+    cos_df = np.zeros(48)
+
+    for i in xrange(1,48+1):
+
+        hrtime = float(i) - 0.5
+
+        if cos_zenith[i-1] > 0.0:
+            zenith = acos(cos_zenith[i-1])
+            if zenith < 80.0 * PID180: #Set FBM = 0.0 for ZEN > 80 degrees
+                cos_bm[i-1] = cos_zenith[i-1] * TAU **(1.0 / cos_zenith[i-1])
+            else:
+                cos_bm[i-1] = 0.0
+
+            cos_df[i-1] = cos_zenith[i-1]
+            sum_bm += cos_bm[i-1]
+            sum_df += cos_df[i-1]
+
+    for i in xrange(1,48+1):
+
+        if sum_bm > 0.0:
+            rdbm = sw * direct_frac[i-1] * cos_bm[i-1] / sum_bm
+        else:
+            rdbm = 0.0
+
+        if sum_df > 0.0:
+            rddf = sw * diffuse_frac[i-1] * cos_df[i-1] / sum_df
+        else:
+            rddf = 0.0
+
+    # Convert sw_rad (MJ/m2/day to W/m2) to PAR (umol m-2 s-1)
+    par = (rddf + rdbm) * 1E6 / sec_2_day * SW_2_PAR
+
+    return par
+
+
 
 
 def estimate_dirunal_par(lat, doy, sw_rad_day):
