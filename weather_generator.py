@@ -33,9 +33,7 @@ def main():
     cos_zenith = calculate_solar_geometry(doy, lat, lon)
     (diffuse_frac) = spitters(doy, sw_rad_wm2, cos_zenith)
 
-
-
-    par_maestra = calc_par_hrly_maestra(sw_rad_day, cos_zenith, diffuse_frac_maestra)
+    par_maestra = calc_par_hrly_maestra(sw_rad_day, cos_zenith, diffuse_frac)
 
 
     elevation = 90.0 - 180.0 / pi * np.arccos(cos_zenith)
@@ -126,12 +124,12 @@ def calc_par_hrly_maestra(sw_rad_day, cos_zenith, diffuse_frac):
     for i in xrange(1,48+1):
 
         if sum_bm > 0.0:
-            rdbm = sw_rad_day * direct_frac[i-1] * cos_bm[i-1] / sum_bm
+            rdbm = sw_rad_day * direct_frac * cos_bm[i-1] / sum_bm
         else:
             rdbm = 0.0
 
         if sum_df > 0.0:
-            rddf = sw_rad_day * diffuse_frac[i-1] * cos_df[i-1] / sum_df
+            rddf = sw_rad_day * diffuse_frac * cos_df[i-1] / sum_df
         else:
             rddf = 0.0
 
@@ -580,34 +578,6 @@ def calc_extra_terrestrial_irradiance(doy, cos_zen):
 
     return So
 
-    # remember sin_beta = cos_zenith; trig funcs are cofuncs of each other
-    # sin(x) = cos(90-x) and cos(x) = sin(90-x).
-    So = Sc * (1.0 + 0.033 * cos(doy / 365.0 * 2.0 * pi)) * cos_zenith;
-
-    return (So)
-
-def estimate_clearness(sw_rad, So):
-    """
-    estimate atmospheric transmisivity - the amount of diffuse radiation
-    is a function of the amount of haze and/or clouds in the sky. Estimate
-    a proxy for this, i.e. the ratio between global solar radiation on a
-    horizontal surface at the ground and the extraterrestrial solar
-    radiation
-    """
-
-    # catch possible divide by zero when zenith = 90.
-    if So <= 0.0:
-        tau = 0.0
-    else:
-        tau = sw_rad / So
-
-    if tau > 1.0:
-        tau = 1.0;
-    elif tau < 0.0:
-        tau = 0.0
-
-    return (tau)
-
 def spitters(doy, par, cos_zenith):
     """
     Spitters algorithm to estimate the diffuse component from the measured
@@ -657,8 +627,6 @@ def spitters(doy, par, cos_zenith):
         diffuse_frac = 1.33 - 1.46 * trans
     else:
         diffuse_frac = 0.23
-
-    diffuse_frac = np.ones(48) * diffuse_frac
 
     return (diffuse_frac)
 
