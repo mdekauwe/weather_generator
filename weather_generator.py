@@ -21,32 +21,34 @@ def main():
     tmin = 2.0
     tmax = 24.0
     doy = 180.0
-    sw_rad_day = 50.0 # mj
-    sw_rad_wm2 = sw_rad_day * 11.57
-    par_day = sw_rad_wm2 * SW_2_PAR
-    print "******", par_day
+    sw_rad_day = 100.0 # mj m-2 d-1
+    par_day = sw_rad_day * 11.5740741 * SW_2_PAR # umol m-2 s-1
 
     lat = 51.5
     lon = -0.13
     hours = np.arange(48) / 2.0
 
-    (par, day_length) = estimate_dirunal_par(lat, doy, sw_rad_day)
+    (par, day_length) = estimate_dirunal_par(doy, lat, sw_rad_day)
 
     cos_zenith = calculate_solar_geometry(doy, lat, lon)
     (diffuse_frac) = spitters(doy, par_day, cos_zenith)
     par_maestra = calc_par_hrly_maestra(par_day, cos_zenith, diffuse_frac)
 
+    #par = sw_rad * MJ_TO_J * DAY_2_SEC * SW_2_PAR
+
+    print "x", sw_rad_day, np.sum(par_maestra / 2.3 * 1E-6 * 86400.0)
+
 
     elevation = 90.0 - 180.0 / pi * np.arccos(cos_zenith)
 
-    fig, ax1 = plt.subplots()
-    ax2 = ax1.twinx()
-    l1, = ax1.plot(hours, elevation, "g-")
-    l2, = ax2.plot(hours, np.ones(48) * diffuse_frac, "r-")
-    l3, = ax2.plot(hours, np.ones(48) * (1.0-diffuse_frac), "b-")
-    fig.legend((l1, l2, l3), ("Elevation", "Diffuse", "Direct"),
-               numpoints=1, loc="upper right")
-    plt.show()
+    #fig, ax1 = plt.subplots()
+    #ax2 = ax1.twinx()
+    #l1, = ax1.plot(hours, elevation, "g-")
+    #l2, = ax2.plot(hours, np.ones(48) * diffuse_frac, "r-")
+    #l3, = ax2.plot(hours, np.ones(48) * (1.0-diffuse_frac), "b-")
+    #fig.legend((l1, l2, l3), ("Elevation", "Diffuse", "Direct"),
+    #           numpoints=1, loc="upper right")
+    #plt.show()
 
     print "***", sw_rad_day, np.sum(par) / 2.3 * 1E-6 * 1800.0, np.sum(par_maestra) / 2300000.0 * 1800.0
     print
@@ -140,7 +142,8 @@ def calc_par_hrly_maestra(par_day, cos_zenith, diffuse_frac):
 
         par[i-1] = (rddf + rdbm) #* 1800.0
         x += rddf + rdbm
-        print par_day, x
+
+    print par_day, x
 
     # check the integration worked? units here are W m-2
     difference = par_day - np.sum(par / 48.)
@@ -151,7 +154,7 @@ def calc_par_hrly_maestra(par_day, cos_zenith, diffuse_frac):
 
     return par
 
-def estimate_dirunal_par(lat, doy, sw_rad_day):
+def estimate_dirunal_par(doy, lat, sw_rad_day):
 
     SEC_2_DAY = 86400.0
     DAY_2_SEC = 1.0 / SEC_2_DAY
@@ -199,7 +202,8 @@ def estimate_dirunal_par(lat, doy, sw_rad_day):
     solar_frac_obs = sw_rad_day / (solar_norm * solar_constant + 1.0E-6)
 
     sw_rad = np.zeros(48)
-
+    par = np.zeros(48)
+    x = 0.0
     # disaggregate radiation
     for i in xrange(1,48+1):
 
@@ -215,8 +219,8 @@ def estimate_dirunal_par(lat, doy, sw_rad_day):
         if (np.abs(rtime) < rhlf_day_length): # day: sun is up
             # Paltridge and Platt eq [3.4]
             sw_rad[i-1] = ((sw_rad_day / solar_norm) * (np.sin(rdec) *
-                          np.sin(rlat) + np.cos(rdec) * np.cos(rlat) *
-                          np.cos(rtime)))
+                            np.sin(rlat) + np.cos(rdec) * np.cos(rlat) *
+                            np.cos(rtime)))
 
             # Need to half rad, as we are doing this over 48 timesteps and not
             # 24, otherwise we will end up with a total which is double
@@ -225,12 +229,18 @@ def estimate_dirunal_par(lat, doy, sw_rad_day):
         else:
             sw_rad[i-1] = 0.0
 
+        # Convert sw_rad (MJ/m2/day to J/m2/s = W/m2) to PAR (umol m-2 s-1)
+        par[i-1] = sw_rad[i-1] * MJ_TO_J * DAY_2_SEC * SW_2_PAR
+        x += par[i-1]
+    print
+    print x
+    print
     # check the integration worked?
     difference = sw_rad_day - np.sum(sw_rad / 48.)
     print "*", difference, sw_rad_day, np.sum(sw_rad / 48.)
 
     # Convert sw_rad (MJ/m2/day to J/m2/s = W/m2) to PAR (umol m-2 s-1)
-    par = sw_rad * MJ_TO_J * DAY_2_SEC * SW_2_PAR
+    #par = sw_rad * MJ_TO_J * DAY_2_SEC * SW_2_PAR
 
     return (par, day_length)
 
