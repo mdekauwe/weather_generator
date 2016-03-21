@@ -29,17 +29,21 @@ def main():
 
     (par, day_length) = estimate_dirunal_par(lat, doy, sw_rad_day)
 
-    (cos_zenith) = calculate_solar_geometry(doy, lat, lon)
+    cos_zenith = calculate_solar_geometry(doy, lat, lon)
     (diffuse_frac) = spitters(doy, sw_rad_wm2, cos_zenith)
     par_maestra = calc_par_hrly_maestra(sw_rad_wm2, cos_zenith, diffuse_frac)
 
-    #fig, ax1 = plt.subplots()
-    #ax2 = ax1.twinx()
-    #ax1.plot(hours, elevation, "g-", label="elevation")
-    #ax2.plot(hours, diffuse_frac, "r-", label="Diffuse")
-    #ax2.plot(hours, direct_frac, "b-", label="Direct")
-    #plt.legend(numpoints=1, loc="best")
-    #plt.show()
+
+    elevation = 90.0 - 180.0 / pi * np.arccos(cos_zenith)
+
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+    l1, = ax1.plot(hours, elevation, "g-")
+    l2, = ax2.plot(hours, diffuse_frac, "r-")
+    l3, = ax2.plot(hours, 1.0-diffuse_frac, "b-")
+    fig.legend((l1, l2, l3), ("Elevation", "Diffuse", "Direct"),
+               numpoints=1, loc="upper right")
+    plt.show()
 
     print "***", sw_rad_day, np.sum(par) / 2.3 * 1E-6 * 1800.0, np.sum(par_maestra) / 2300000.0 * 1800.0
     plt.plot(hours, par, "r-")
