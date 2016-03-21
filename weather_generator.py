@@ -35,14 +35,15 @@ def main():
     (diffuse_frac_maestra) =spitters_maestra(doy, par_day, cos_zenith)
 
     plt.plot(hours, diffuse_frac, "r-", label="mine")
-    plt.plot(hours, np.ones(len(hours)) * diffuse_frac_maestra, "b-", label="MAESTRA")
+    plt.plot(hours, diffuse_frac_maestra, "b-", label="MAESTRA")
     plt.xlabel("Hour of day")
     plt.legend(numpoints=1, loc="best")
     plt.show()
 
+    #sys.exit()
 
-    sys.exit()
-    par_maestra = calc_par_hrly_maestra(sw_rad_day, cos_zenith, diffuse_frac)
+
+    par_maestra = calc_par_hrly_maestra(sw_rad_day, cos_zenith, diffuse_frac_maestra)
 
 
     elevation = 90.0 - 180.0 / pi * np.arccos(cos_zenith)
@@ -552,7 +553,7 @@ def calculate_eqn_of_time(gamma):
 
     return (et)
 
-def calc_extra_terrestrial_irradiance(doy, cos_zenith):
+def calc_extra_terrestrial_irradiance(doy, cos_zen):
     """
     Solar radiation incident outside the earth's atmosphere, e.g.
     extra-terrestrial radiation. The value varies a little with the earths
@@ -568,12 +569,24 @@ def calc_extra_terrestrial_irradiance(doy, cos_zenith):
     --------
     So : float
         solar radiation normal to the sun's bean outside the Earth's atmosphere
-        (W m-2)
+        (J m-2 s-1)
+
     Reference:
     ----------
     * Spitters et al. (1986) AFM, 38, 217-229, equation 1.
     """
-    Sc = 1370.0 # W m-2
+
+    # Solar constant (J m-2 s-1)
+    Sc = 1370.0
+
+    if cos_zen > 0.0:
+        # remember sin_beta = cos_zenith; trig funcs are cofuncs of each other
+        # sin(x) = cos(90-x) and cos(x) = sin(90-x).
+        So = Sc * (1.0 + 0.033 * cos(float(doy) / 365.0 * 2.0 * pi)) * cos_zen
+    else:
+        So = 0.0
+
+    return So
 
     # remember sin_beta = cos_zenith; trig funcs are cofuncs of each other
     # sin(x) = cos(90-x) and cos(x) = sin(90-x).
@@ -605,19 +618,16 @@ def estimate_clearness(sw_rad, So):
 
 def spitters_maestra(doy, par, cos_zenith):
 
-    PID180 = pi / 180.0
-    PID2 = pi / 2.0
-    KHRS = 48.0
     FPAR = 0.5          # Fraction of global radiation that is PAR
-    sperhr = 3600.0 * 24.0 / KHRS
+    SEC_2_HFHR = 1800.0
+    J_TO_MJ = 1E-6
+    conv = SEC_2_HFHR * J_TO_MJ
 
     # Calculate extra-terrestrial radiation
     S0 = 0.0
     for i in xrange(1, 48+1):
         zenith = 180.0 / pi * acos(cos_zenith[i-1])
-        sinb = sin(PID2 - zenith)
-        S0 += etrad(doy, sinb) * sperhr / 1E6
-
+        S0 += calc_extra_terrestrial_irradiance(doy, cos(zenith)) * conv
 
     # Spitter's formula
     trans = (par / FPAR) / S0
@@ -630,8 +640,9 @@ def spitters_maestra(doy, par, cos_zenith):
     else:
         diffuse_frac = 0.23
 
-    return (diffuse_frac)
+    diffuse_frac = np.ones(48) * diffuse_frac
 
+    return (diffuse_frac)
 
 def etrad(doy, sinb):
     """
@@ -640,16 +651,16 @@ def etrad(doy, sinb):
     Returns value in J m-2 s-1.
     """
 
-    SOLARC = 1370       # Solar constant (J m-2 s-1)
+    # Solar constant (J m-2 s-1)
+    Sc = 1370.0
 
     # Spitters' formula
     if sinb > 0.0:
-        etrad = SOLARC * (1 + 0.033 * cos(float(doy) / 365.0 * 2.0 * pi)) * sinb
+        etrad = Sc * (1.0 + 0.033 * cos(float(doy) / 365.0 * 2.0 * pi)) * sinb
     else:
         etrad = 0.0
 
     return etrad
-
 
 def spitters(doy, sw_rad, cos_zenith):
     """
