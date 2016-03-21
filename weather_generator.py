@@ -24,6 +24,8 @@ def main():
     sw_rad_day = 50.0 # mj
     sw_rad_wm2 = sw_rad_day * 11.57
     par_day = sw_rad_wm2 * SW_2_PAR
+    print "******", par_day
+
     lat = 51.5
     lon = -0.13
     hours = np.arange(48) / 2.0
@@ -31,9 +33,8 @@ def main():
     (par, day_length) = estimate_dirunal_par(lat, doy, sw_rad_day)
 
     cos_zenith = calculate_solar_geometry(doy, lat, lon)
-    (diffuse_frac) = spitters(doy, sw_rad_wm2, cos_zenith)
-
-    par_maestra = calc_par_hrly_maestra(sw_rad_day, cos_zenith, diffuse_frac)
+    (diffuse_frac) = spitters(doy, par_day, cos_zenith)
+    par_maestra = calc_par_hrly_maestra(par_day, cos_zenith, diffuse_frac)
 
 
     elevation = 90.0 - 180.0 / pi * np.arccos(cos_zenith)
@@ -48,6 +49,8 @@ def main():
     plt.show()
 
     print "***", sw_rad_day, np.sum(par) / 2.3 * 1E-6 * 1800.0, np.sum(par_maestra) / 2300000.0 * 1800.0
+    print
+    print "****", sw_rad_day, np.sum(par) / 2.3 * 1E-6 * 1800.0, np.sum(par_maestra) / 48.
     plt.plot(hours, par, "r-")
     plt.plot(hours, par_maestra, "b-", label="MAESTRA")
     plt.ylabel("par ($\mu$mol m$^{-2}$ s$^{-1}$)")
@@ -87,7 +90,7 @@ def main():
     plt.ylim(0, 3)
     plt.show()
 
-def calc_par_hrly_maestra(sw_rad_day, cos_zenith, diffuse_frac):
+def calc_par_hrly_maestra(par_day, cos_zenith, diffuse_frac):
 
     MJ_TO_J = 1E6
     TAU = 0.76
@@ -109,8 +112,10 @@ def calc_par_hrly_maestra(sw_rad_day, cos_zenith, diffuse_frac):
         hrtime = float(i) - 0.5
 
         if cos_zenith[i-1] > 0.0:
-            zenith = 180.0 / pi * acos(cos_zenith[i-1])
-            if zenith < 80.0 * PID180: #Set FBM = 0.0 for ZEN > 80 degrees
+            zenith = acos(cos_zenith[i-1])
+
+            # set FBM = 0.0 for ZEN > 80 degrees
+            if zenith < 80.0 * PID180:
                 cos_bm[i-1] = cos_zenith[i-1] * TAU**(1.0 / cos_zenith[i-1])
             else:
                 cos_bm[i-1] = 0.0
@@ -119,29 +124,30 @@ def calc_par_hrly_maestra(sw_rad_day, cos_zenith, diffuse_frac):
             sum_bm += cos_bm[i-1]
             sum_df += cos_df[i-1]
 
-    sw_rad = np.zeros(48)
-    chk = np.zeros(48)
+    par = np.zeros(48)
+    x = 0.0
     for i in xrange(1,48+1):
 
         if sum_bm > 0.0:
-            rdbm = sw_rad_day * direct_frac * cos_bm[i-1] / sum_bm
+            rdbm = par_day * direct_frac * cos_bm[i-1] / sum_bm
         else:
             rdbm = 0.0
 
         if sum_df > 0.0:
-            rddf = sw_rad_day * diffuse_frac * cos_df[i-1] / sum_df
+            rddf = par_day * diffuse_frac * cos_df[i-1] / sum_df
         else:
             rddf = 0.0
 
-        sw_rad[i-1] = (rddf + rdbm)
-
+        par[i-1] = (rddf + rdbm) #* 1800.0
+        x += rddf + rdbm
+        print par_day, x
 
     # check the integration worked? units here are W m-2
-    difference = sw_rad_day - np.sum(sw_rad / 48.)
-    print "**", difference, sw_rad_day, np.sum(sw_rad / 48.)
+    difference = par_day - np.sum(par / 48.)
+    print "**", difference, par_day, np.sum(par / 48.)
 
     # Convert sw_rad (MJ/m2/day to J/m2/s = W/m2) to PAR (umol m-2 s-1)
-    par = sw_rad * MJ_TO_J * DAY_2_SEC * SW_2_PAR
+    #par = sw_rad * MJ_TO_J * DAY_2_SEC * SW_2_PAR
 
     return par
 
