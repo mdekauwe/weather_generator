@@ -497,7 +497,7 @@ def calculate_eqn_of_time(gamma):
 
     return (et)
 
-def calc_extra_terrestrial_irradiance(doy, cos_zen):
+def calc_extra_terrestrial_rad(doy, cos_zen):
     """
     Solar radiation incident outside the earth's atmosphere, e.g.
     extra-terrestrial radiation. The value varies a little with the earths
@@ -573,7 +573,7 @@ def spitters(doy, par, cos_zenith):
     S0 = 0.0
     for i in xrange(48):
         cos_zen = cos(acos(cos_zenith[i]) * 180.0 / pi) # degrees
-        S0 += calc_extra_terrestrial_irradiance(doy, cos_zen) * CONV
+        S0 += calc_extra_terrestrial_rad(doy, cos_zen) * CONV
 
     # Spitter's formula (Eqns. 2a-d)
     trans = (par / fpar) / S0
