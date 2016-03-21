@@ -222,21 +222,23 @@ def maestra_diurnal_func(tmin, tmax, day_length):
     tav = (tmax + tmin) / 2.0
     tampl = (tmax - tmin) / 2.0
 
+    dayl = day_length * 2.
+
     tday = np.zeros(48)
     for i in xrange(1, 48+1):
         hrtime = i - 0.5
-        time = i + day_length * 0.5 - 48.0 / 2.0
-        if time < 0.0 or time > day_length:
+        time = i + dayl * 0.5 - 48.0 / 2.0
+        if time < 0.0 or time > dayl:
             if time < 0.0:
                 hrtime += 48
 
             arg1 = tav
-            arg2 = (tav - tmin) * (hrtime - day_length * 0.5 - (48.0 / 2.0))
-            arg3 = 48.0 - day_length
+            arg2 = (tav - tmin) * (hrtime - dayl * 0.5 - (48.0 / 2.0))
+            arg3 = 48.0 - dayl
 
             tday[i-1] = arg1 - arg2 / arg3
         else:
-            tday[i-1] = tav - tampl * cos(1.5 * pi * time / day_length)
+            tday[i-1] = tav - tampl * cos(1.5 * pi * time / dayl)
 
     return (tday)
 
