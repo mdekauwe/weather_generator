@@ -65,7 +65,7 @@ def main():
     print "factor", np.sum(par) / np.sum(par_maestra)
 
 
-    #plt.plot(hours, par, "r-")
+    plt.plot(hours, par/48., "r-")
     plt.plot(hours, par_maestra, "b-", label="MAESTRA")
     plt.ylabel("par ($\mu$mol m$^{-2}$ s$^{-1}$)")
     plt.xlabel("Hour of day")
