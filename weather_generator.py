@@ -20,7 +20,8 @@ def main():
     tmin = 2.0
     tmax = 24.0
     doy = 180.0
-    sw_rad_day = 50.0
+    sw_rad_day = 50.0 # mj
+    sw_rad_wm2 = sw_rad_day / 0.0864
     lat = 51.5
     lon = -0.13
     hours = np.arange(48) / 2.0
@@ -28,17 +29,20 @@ def main():
     (par, day_length) = estimate_dirunal_par(lat, doy, sw_rad_day)
 
     (elevation, cos_zenith) = calculate_solar_geometry(doy, lat, lon)
+    (direct_frac, diffuse_frac) = spitters(doy, sw_rad_wm2, cos_zenith)
 
-
-    plt.plot(hours, elevation, "r-")
+    fig, ax1 = plt.subplots()
+    ax2 = ax1.twinx()
+    ax1.plot(hours, elevation, "g-", label="elevation")
+    ax2.plot(hours, diffuse_frac, "r-", label="Diffuse")
+    ax2.plot(hours, direct_frac, "b-", label="Direct")
+    plt.legend(numpoints=1, loc="best")
     plt.show()
 
-    sys.exit()
-
-    #plt.plot(hours, par, "r-")
-    #plt.ylabel("par ($\mu$mol m$^{-2}$ s$^{-1}$)")
-    #plt.xlabel("Hour of day")
-    #plt.show()
+    plt.plot(hours, par, "r-")
+    plt.ylabel("par ($\mu$mol m$^{-2}$ s$^{-1}$)")
+    plt.xlabel("Hour of day")
+    plt.show()
 
     tday = estimate_diurnal_temp(tmin, tmax, day_length)
     tday2 = maestra_diurnal_func(tmin, tmax, day_length)
@@ -522,6 +526,65 @@ def estimate_clearness(sw_rad, So):
         tau = 0.0
 
     return (tau)
+
+
+def spitters(doy, sw_rad, cos_zenith):
+    """
+    Spitters algorithm to estimate the diffuse component from the measured
+    irradiance.
+    Parameters:
+    ----------
+    doy : int
+        day of year
+    par : double
+        total par measured [umol m-2 s-1]
+    Returns:
+    -------
+    diffuse : double
+        diffuse component of incoming radiation
+    References:
+    ----------
+    * Spitters, C. J. T., Toussaint, H. A. J. M. and Goudriaan, J. (1986)
+      Separating the diffuse and direct component of global radiation and its
+      implications for modeling canopy photosynthesis. Part I. Components of
+      incoming radiation. Agricultural Forest Meteorol., 38:217-229.
+    """
+
+    diffuse_frac = np.zeros(48)
+    direct_frac = np.zeros(48)
+    for i in xrange(1, 48+1):
+        # need to convert 30 min data, 0-47 to 0-23.5
+        hod = i / 2.0
+
+        So = calc_extra_terrestrial_irradiance(doy, cos_zenith[i-1]);
+
+        # atmospheric transmisivity #
+        tau = estimate_clearness(sw_rad, So)
+
+        # For zenith angles > 80 degrees, diffuse_frac = 1.0
+        if cos_zenith[i-1] > 0.17:
+            # the ratio between diffuse and total Solar irradiance (R), eqn 20
+            R = 0.847 - 1.61 * cos_zenith[i-1] + 1.04 * cos_zenith[i-1]**2
+            K = (1.47 - R) / 1.66
+            if tau <= 0.22:
+                diffuse_frac[i-1] = 1.0;
+            elif tau > 0.22 and tau <= 0.35:
+                diffuse_frac[i-1] = 1.0 - 6.4 * (tau - 0.22)**2
+            elif tau > 0.35 and tau <= K:
+                diffuse_frac[i-1] = 1.47 - 1.66 * tau
+            else:
+                diffuse_frac[i-1] = R
+        else:
+            diffuse_frac[i-1] = 1.0
+
+        if diffuse_frac[i-1] <= 0.0:
+            diffuse_frac[i-1] = 0.0
+        elif diffuse_frac[i-1] >= 1.0:
+            diffuse_frac[i-1]= 1.0
+
+        direct_frac[i-1] = 1.0 - diffuse_frac[i-1]
+
+    return (direct_frac, diffuse_frac)
 
 if __name__ == "__main__":
 
