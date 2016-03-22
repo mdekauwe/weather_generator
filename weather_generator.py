@@ -572,17 +572,18 @@ def spitters(doy, par, cos_zenith):
     # Calculate extra-terrestrial radiation
     S0 = 0.0
     for i in xrange(48):
-        cos_zen = cos(acos(cos_zenith[i]) * 180.0 / pi) # degrees
-        S0 += calc_extra_terrestrial_rad(doy, cos_zen) * CONV
+        S0 += calc_extra_terrestrial_rad(doy, cos_zenith[i]) * CONV
 
-    # Spitter's formula (Eqns. 2a-d)
-    trans = (par / fpar) / S0
-    if trans < 0.07:
+    # atmospheric transmisivity
+    tau = (par * fpar) / S0
+
+    ## Spitter's formula (Eqns. 2a-d)
+    if tau < 0.07:
         diffuse_frac = 1.0
-    elif trans < 0.35:
-        diffuse_frac = 1.0 - 2.3 * (trans - 0.07)**2
-    elif trans < 0.75:
-        diffuse_frac = 1.33 - 1.46 * trans
+    elif tau < 0.35:
+        diffuse_frac = 1.0 - 2.3 * (tau - 0.07)**2
+    elif tau < 0.75:
+        diffuse_frac = 1.33 - 1.46 * tau
     else:
         diffuse_frac = 0.23
 
