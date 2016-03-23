@@ -37,7 +37,6 @@ def main():
     par_day = sw_rad_day * SW_2_PAR / UMOLPERJ
 
     day_length = calc_day_length(doy, 365, lat)
-    print day_length
     cos_zenith = calculate_solar_geometry(doy, lat, lon)
     diffuse_frac = spitters(doy, par_day, cos_zenith)
     par = estimate_dirunal_par(par_day, cos_zenith, diffuse_frac)
@@ -85,7 +84,7 @@ def main():
 
 def estimate_dirunal_par(par_day, cos_zenith, diffuse_frac):
     """
-    Calculate daily course of incident PAR from daily totals using routinue
+    Calculate daily course of incident PAR from daily totals using routine
     from MAESTRA
 
     Arguments:
@@ -575,7 +574,7 @@ def spitters(doy, par, cos_zenith):
         S0 += calc_extra_terrestrial_rad(doy, cos_zenith[i]) * CONV
 
     # atmospheric transmisivity
-    tau = (par * fpar) / S0
+    tau = (par / fpar) / S0
 
     ## Spitter's formula (Eqns. 2a-d)
     if tau < 0.07:
