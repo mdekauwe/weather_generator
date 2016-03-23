@@ -23,7 +23,8 @@ def main():
     MJ_TO_J = 1E6
     SEC_2_DAY = 86400.0
     DAY_2_SEC = 1.0 / SEC_2_DAY
-    UMOLPERJ = 4.57     # Conversion from J to umol quanta
+    J_TO_UMOL = 4.57
+    UMOL_TO_J = 1.0 / J_TO_UMOL
     lat = 51.5
     lon = -0.13
     hours = np.arange(48) / 2.0
@@ -34,7 +35,12 @@ def main():
 
     # MJ m-2 d-1 -> J m-2 s-1 = W m-2 -> MJ m-2 d-1
     # all the other units conv cancel.
-    par_day = sw_rad_day * SW_2_PAR / UMOLPERJ
+    #par_day = sw_rad_day * SW_2_PAR / UMOLPERJ
+
+
+    # MJ m-2 d-1 -> J m-2 s-1 = W m-2 -> umol m-2 s-1 -> MJ m-2 d-1
+    par_day = sw_rad_day * MJ_TO_J * DAY_2_SEC * SW_2_PAR * UMOL_TO_J * J_TO_MJ * SEC_2_DAY
+
 
     day_length = calc_day_length(doy, 365, lat)
     cos_zenith = calculate_solar_geometry(doy, lat, lon)
