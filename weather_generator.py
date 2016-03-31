@@ -11,7 +11,7 @@ from math import pi, cos, sin, exp, sqrt, acos, asin
 import random
 
 __author__  = "Martin De Kauwe"
-__version__ = "1.0 (16.03.2016)"
+__version__ = "1.0 (31.03.2016)"
 __email__   = "mdekauwe@gmail.com"
 
 class WeatherGenerator(object):
