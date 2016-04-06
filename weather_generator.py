@@ -135,6 +135,47 @@ class WeatherGenerator(object):
 
         return vpd
 
+    def estimate_diurnal_vpd_BM(self, vpd09, vpd15, vpd09_next, vpd15_prev):
+        """
+        Interpolate VPD between 9am and 3pm values to generate diurnal VPD
+        following the method of Haverd et al. This seems reasonable, vapour
+        pressure plotted aginst time of day often does not reveal consistent
+        patterns, with small fluctuations (see Kimball and Bellamy, 1986).
+
+
+        Reference:
+        ---------
+        * Haverd et al. (2013) Multiple observation types reduce uncertainty in
+          Australia's terrestrial carbon and water cycles. Biogeosciences, 10,
+          2011-2040.
+        """
+        # number of hours gap, i.e. 3pm to 9am the next day
+        gap = 18.0
+
+
+        vpd = np.zeros(48)
+        for i in xrange(1, 48+1):
+            hour = i / 2.0
+            if hour <= 9.0:
+                offset = 14.0
+                offset15 = offset - (hour - offset)
+                offset09 = hour - offset
+                vpd[i-1] = vpd15_prev + (vpd09 - vpd15_prev) * (9.0 + hour) / gap
+            elif hour > 9.0 and hour <= 15.0:
+                offset = 8.0
+                offset09 = offset - (hour - offset)
+                offset15 = hour - offset
+
+
+                vpd[i-1] = vpd09 * (offset09 / 7.0) + vpd15 *  (offset15 / 7.0)
+            elif hour > 15.0:
+                offset = 14.0
+                offset15 = offset - (hour - offset)
+                offset09 = hour - offset
+                vpd[i-1] =  vpd15 * (offset15 / gap) + vpd09_next * (offset09 / gap)
+
+        return vpd
+
     def disaggregate_rainfall(self, rain_day):
         """
         Assign daily PPT total to hours of the day, following MAESTRA, which
@@ -613,7 +654,7 @@ if __name__ == "__main__":
     par = WG.estimate_dirunal_par(par_day)
 
 
-
+    """
     plt.plot(hours, par, "r-")
     plt.ylabel("par ($\mu$mol m$^{-2}$ s$^{-1}$)")
     plt.xlabel("Hour of day")
@@ -636,11 +677,13 @@ if __name__ == "__main__":
     plt.xlabel("Hour of day")
     plt.ylim(0, 3)
     plt.show()
-
+    """
 
     vpd = WG.estimate_diurnal_vpd(vpd09, vpd15, vpd09_next, vpd15_prev)
+    vpd_bm = WG.estimate_diurnal_vpd_BM(vpd09, vpd15, vpd09_next, vpd15_prev)
 
     plt.plot(hours, vpd, "ro")
+    plt.plot(hours, vpd_bm, "bo")
     plt.ylabel("VPD (kPa)")
     plt.xlabel("Hour of day")
     plt.ylim(0, 3)
